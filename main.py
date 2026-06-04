@@ -65,7 +65,7 @@ class RealLuaVM:
             f"local {v_k}={vm_key};"
             f"local {v_c}={{}};"
             f"for i=1,#{v_enc} do "
-                f"local {v_s}='';"
+                f"local {v_s}=[==[]==];"
                 f"for j=1,#{v_enc}[i] do {v_s}={v_s}..string.char({v_enc}[i][j]~{v_k}) end;"
                 f"{v_c}[i]={v_s} "
             f"end;"
@@ -97,19 +97,19 @@ def ironbrew_total_wrapped_v10_6(vm_code):
         junk_pieces.append(f"local {v_junk}={obfuscate_to_mixed_math(rand_target)}")
     junk = ";".join(junk_pieces)
     
-    v_s, v_k, v_b = random_var(), random_var(), random_var()
+    v_s, v_k, v_b, v_exec = [random_var() for _ in range(4)]
     
     script = (
         f"return(function(...) "
             f"{junk};"
-            f"local {v_s}='{hex_payload}';"
+            f"local {v_s}=[=[{hex_payload}]=];"
             f"local {v_k}={init_key};"
-            f"local {v_b}='';"
+            f"local {v_b}=[==[]==];"
             f"for i=1,#{v_s},2 do "
                 f"{v_b}={v_b}..string.char(tonumber(string.sub({v_s},i,i+1),16)~(({v_k}+(i/2)+7)%256))"
             f"end;"
-            f"local _exec=function(_code) {vm_code} end;"
-            f"_exec({v_b});"
+            f"local {v_exec}=assert(load({v_b}));"
+            f"{v_exec}(...);"
         f"end)(...)"
     )
     return script.strip().replace('\n', '')
@@ -141,4 +141,3 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-
