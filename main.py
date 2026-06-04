@@ -27,10 +27,32 @@ def random_var(length=6):
     rest = ''.join(random.choices(string.ascii_letters + string.digits, k=length-1))
     return first + rest
 
+def obfuscate_core_math(target):
+    """
+    Bộ sinh toán học an toàn dành riêng cho lõi VM để tránh lỗi sai lệch toán tử ^ và /.
+    Chỉ dùng toán tử toán học cơ bản lồng ngoặc chặt chẽ.
+    """
+    current_val = target
+    ops_pool = []
+    for _ in range(random.randint(2, 3)):
+        op = random.choice(['+', '-'])
+        rand_num = random.randint(100000, 500000)
+        if op == '+':
+            current_val = current_val - rand_num
+            ops_pool.append(f"+{hex(rand_num)}" if random.choice([True, False]) else f"+{rand_num}")
+        elif op == '-':
+            current_val = current_val + rand_num
+            ops_pool.append(f"-{hex(rand_num)}" if random.choice([True, False]) else f"-{rand_num}")
+    start_style = random.choice(['normal', 'hex'])
+    expr = hex(current_val) if start_style == 'hex' else str(current_val)
+    for action in reversed(ops_pool):
+        expr = f"({expr}{action})"
+    return f"({expr})"
+
 def generate_clean_advanced_junk(target):
     """
-    Hàm sinh rác thuật toán tối cao: Trộn lẫn số Hex, toán tử đảo dấu nâng cao,
-    và logic so sánh inline. Tuyệt đối không dùng chuỗi văn bản, bao chạy 100%.
+    Hàm sinh rác siêu hỗn loạn dành riêng cho 2500 biến rác ngoài rìa.
+    Trộn lẫn Hex, số âm lồng, logic inline giúp đánh lừa decompiler tối đa.
     """
     junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
     
@@ -47,57 +69,32 @@ def generate_clean_advanced_junk(target):
             else:
                 current_val += rand_num
                 ops_pool.append(f"-{hex(rand_num)}")
-        
         expr = hex(current_val)
         for action in reversed(ops_pool):
             expr = f"({expr}{action})"
         return f"({expr})"
         
-    # Kiểu 2: Số âm lồng nhau đảo dấu toán học bổ bù dịch số
+    # Kiểu 2: Số âm lồng nhau đảo dấu toán học dịch số
     elif junk_mode == 'negative_double':
         offset1 = random.randint(50000, 200000)
         offset2 = random.randint(10000, 40000)
-        # target = -(-target - offset1 + offset2) - offset1 + offset2
         base = target + offset1 - offset2
         return f"(-(-{base}-{hex(offset1)})+{hex(offset2)})"
         
-    # Kiểu 3: Toán tử logic Boolean Inline (A > B and X or Y) tự triệt tiêu về số gốc
+    # Kiểu 3: Toán tử logic Boolean Inline tự triệt tiêu về số gốc
     elif junk_mode == 'logical_inline':
         rand_check = random.randint(100, 1000)
         rand_adder = random.randint(5000, 15000)
         if random.choice([True, False]):
-            # Biểu thức logic luôn đúng hoặc luôn sai để cộng thêm đúng lượng thiếu
             return f"({target - rand_adder} + ({rand_check} > 50 and {rand_adder} or 0))"
         else:
             return f"({target + rand_adder} - ({rand_check} < 50 and 0 or {rand_adder}))"
             
-    # Kiểu 4: Hỗn hợp số thực tế kết hợp toán tử số âm lồng Hex thông thường của bản gốc bro đưa
+    # Kiểu 4: Hỗn hợp số cơ bản lồng toán học gốc
     else:
-        current_val = target
-        ops_pool = []
-        for _ in range(random.randint(2, 3)):
-            op = random.choice(['+', '-'])
-            rand_num = random.randint(100000, 1500000)
-            if op == '+':
-                current_val = current_val - rand_num
-                display_style = random.choice(['normal', 'negative', 'hex'])
-                if display_style == 'normal': ops_pool.append(f"+{rand_num}")
-                elif display_style == 'negative': ops_pool.append(f"-(-{rand_num})")
-                else: ops_pool.append(f"+{hex(rand_num)}")
-            elif op == '-':
-                current_val = current_val + rand_num
-                display_style = random.choice(['normal', 'negative', 'hex'])
-                if display_style == 'normal': ops_pool.append(f"-{rand_num}")
-                elif display_style == 'negative': ops_pool.append(f"+(-{rand_num})")
-                else: ops_pool.append(f"-{hex(rand_num)}")
-        start_style = random.choice(['normal', 'hex'])
-        expr = hex(current_val) if start_style == 'hex' else str(current_val)
-        for action in reversed(ops_pool):
-            expr = f"({expr}{action})"
-        return f"({expr})"
+        return obfuscate_core_math(target)
 
 def ironbrew_total_wrapped_v10_6(source_code):
-    # Khóa gốc ban đầu sinh ngẫu nhiên
     init_key = random.randint(100, 250)
     
     encrypted_hex_list = []
@@ -107,7 +104,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
         encrypted_hex_list.append(f"{cipher_byte:02X}")
         current_key = (current_key + idx + 7) % 256
 
-    # GIỮ NGUYÊN: Khối Hex Payload nằm ở giữa như cũ
+    # GIỮ NGUYÊN: Khối Hex Payload ở giữa cấu trúc tệp như cũ
     hex_payload = "".join(encrypted_hex_list)
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
@@ -126,7 +123,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
     v_h_ls, v_h_l = random_var(), random_var()
     v_rolling_key, v_byte_idx = random_var(), random_var()
 
-    # Sinh 2500 dòng biến rác đa loại (Không dùng chuỗi chữ)
+    # Sinh 2500 dòng biến rác đa dạng thể loại cực nặng (Áp dụng cho đống rác ngoài rìa)
     junk_pieces = []
     for _ in range(2500):
         v_junk = random_var()
@@ -135,14 +132,14 @@ def ironbrew_total_wrapped_v10_6(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Lõi VM áp dụng bộ sinh rác đa tầng, giấu tiệt cả hằng số hệ thống và init_key
+    # Lõi VM sử dụng bộ mã hóa lõi an toàn tuyệt đối để đảm bảo thực thi đúng logic toán tử Lua
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
         f"for {v_m}=0,7 do "
-        f"local {v_w}=({v_i}/{generate_clean_advanced_junk(2)}^{v_m})%2; "
-        f"local {v_res}=({v_j}/{generate_clean_advanced_junk(2)}^{v_m})%2; "
-        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+{generate_clean_advanced_junk(2)}^{v_m} end "
+        f"local {v_w}=({v_i}/({obfuscate_core_math(2)})^{v_m})%2; " # Đóng ngoặc bọc chặt hằng số 2
+        f"local {v_res}=({v_j}/({obfuscate_core_math(2)})^{v_m})%2; "
+        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+({obfuscate_core_math(2)})^{v_m} end "
         f"end "
         f"return {v_x} "
         f"end; "
@@ -150,28 +147,28 @@ def ironbrew_total_wrapped_v10_6(source_code):
         f"local {v_h_ls}=\"{hex_loadstring}\"; "
         f"local {v_h_l}=\"{hex_load}\"; "
         f"local {v_buffer}=\"\"; "
-        f"for {v_loop_idx}={generate_clean_advanced_junk(1)},{generate_clean_advanced_junk(2)} do "
-        f"if {v_loop_idx}=={generate_clean_advanced_junk(1)} then "
+        f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
+        f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        f"local {v_rolling_key}={generate_clean_advanced_junk(init_key)}; " 
+        f"local {v_rolling_key}={obfuscate_core_math(init_key)}; " # Obf init_key an toàn
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_bit_func}({v_num},{v_rolling_key}); "
         f"{v_buffer}={v_buffer}..string.char({v_dec}); "
-        f"{v_rolling_key}=({v_rolling_key}+{v_byte_idx}+{generate_clean_advanced_junk(7)})%256; "
+        f"{v_rolling_key}=({v_rolling_key}+{v_byte_idx}+{obfuscate_core_math(7)})%256; "
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
-        f"elseif {v_loop_idx}=={generate_clean_advanced_junk(2)} then "
+        f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
-        f"for {v_t_idx}=1,{generate_clean_advanced_junk(len_ls)},2 do "
+        f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{generate_clean_advanced_junk(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_core_math(init_key)})) end "
         f"end; "
-        f"for {v_t_idx}=1,{generate_clean_advanced_junk(len_l)},2 do "
+        f"for {v_t_idx}=1,{obfuscate_core_math(len_l)},2 do "
         f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{generate_clean_advanced_junk(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_core_math(init_key)})) end "
         f"end; "
         f"local {v_env}=getfenv(); "
         f"local {v_func}={v_env}[{v_str1}] or {v_env}[{v_str2}]; "
@@ -207,4 +204,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-    
+
