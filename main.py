@@ -11,42 +11,108 @@ def home():
 def run_server():
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8000)))
 
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
+
+def random_var(length=6):
+    first = random.choice(string.ascii_letters)
+    rest = ''.join(random.choices(string.ascii_letters + string.digits, k=length-1))
+    return first + rest
+
+def obfuscate_to_mixed_math(target):
+    current_val = target
+    ops_pool = []
+    for _ in range(random.randint(2, 4)):
+        op = random.choice(['+', '-'])
+        rand_num = random.randint(100000, 1500000)
+        if op == '+':
+            current_val = current_val - rand_num
+            display_style = random.choice(['normal', 'negative', 'hex'])
+            if display_style == 'normal': ops_pool.append(f"+{rand_num}")
+            elif display_style == 'negative': ops_pool.append(f"-(-{rand_num})")
+            else: ops_pool.append(f"+{hex(rand_num)}")
+        elif op == '-':
+            current_val = current_val + rand_num
+            display_style = random.choice(['normal', 'negative', 'hex'])
+            if display_style == 'normal': ops_pool.append(f"-{rand_num}")
+            elif display_style == 'negative': ops_pool.append(f"+(-{rand_num})")
+            else: ops_pool.append(f"-{hex(rand_num)}")
+    start_style = random.choice(['normal', 'hex'])
+    expr = hex(current_val) if start_style == 'hex' else str(current_val)
+    for action in reversed(ops_pool):
+        expr = f"({expr}{action})"
+    return f"({expr})"
+
 class RealLuaVM:
     def __init__(self):
-        # Tạo Opcode ngẫu nhiên để chống làm công cụ giải mã hàng loạt
         self.OP_LOADK = random.randint(10, 50)
         self.OP_PRINT = random.randint(51, 100)
         self.OP_HALT = 255
         
     def compile_to_bytecode(self, source_code):
-        # Bộ phân tích cú pháp tĩnh đơn giản chuyển đổi mã nguồn thành Opcode dữ liệu số
-        # Mảng mẫu: Nạp hằng số số 0 vào thanh ghi 0 -> Gọi lệnh Print thanh ghi 0 -> Dừng
-        return [self.OP_LOADK, 0, 0, self.OP_PRINT, 0, self.OP_HALT], ["Hello VM - No Loadstring!"]
+        return [self.OP_LOADK, 0, 0, self.OP_PRINT, 0, self.OP_HALT], ["Hello VM - Zero Loadstring!"]
 
     def build_vm_interpreter(self, bytecode, constants):
         vm_key = random.randint(100, 200)
         enc_c = "{" + ",".join(["{" + ",".join([str(ord(x)^vm_key) for x in c]) + "}" for c in constants if isinstance(c, str)]) + "}"
         
-        # Toàn bộ logic chạy bằng mảng dữ liệu số, không dùng load/loadstring để tạo hàm
-        return f"""local _B={{{','.join(map(str, bytecode))}}};local _EncC={enc_c};local _K={vm_key};local _C={{}};for i=1,#_EncC do local s='';for j=1,#_EncC[i] do s=s..string.char(_EncC[i][j]~_K) end;_C[i]=s end;local reg={{}};local pc=1;while true do local op=_B[pc];if op=={self.OP_HALT} then break end;if op=={self.OP_LOADK} then reg[_B[pc+1]+1]=_C[_B[pc+2]+1];pc=pc+3 elseif op=={self.OP_PRINT} then print(reg[_B[pc+1]+1]);pc=pc+2 else pc=pc+1 end end"""
+        v_b, v_enc, v_k, v_c, v_s, v_reg, v_pc, v_op = [random_var() for _ in range(8)]
+        
+        return (
+            f"local {v_b}={{{','.join(map(str, bytecode))}}};"
+            f"local {v_enc}={enc_c};"
+            f"local {v_k}={vm_key};"
+            f"local {v_c}={{}};"
+            f"for i=1,#{v_enc} do "
+                f"local {v_s}='';"
+                f"for j=1,#{v_enc}[i] do {v_s}={v_s}..string.char({v_enc}[i][j]~{v_k}) end;"
+                f"{v_c}[i]={v_s} "
+            f"end;"
+            f"local {v_reg}={{}};"
+            f"local {v_pc}=1;"
+            f"while true do "
+                f"local {v_op}={v_b}[{v_pc}];"
+                f"if {v_op}=={self.OP_HALT} then break end;"
+                f"if {v_op}=={self.OP_LOADK} then "
+                    f"{v_reg}[{v_b}[{v_pc}+1]+1]={v_c}[{v_b}[{v_pc}+2]+1];"
+                    f"{v_pc}={v_pc}+3 "
+                f"elseif {v_op}=={self.OP_PRINT} then "
+                    f"print({v_reg}[{v_b}[{v_pc}+1]+1]);"
+                    f"{v_pc}={v_pc}+2 "
+                f"else "
+                    f"{v_pc}={v_pc}+1 "
+                f"end "
+            f"end"
+        )
 
-def get_final_script(vm_code):
+def ironbrew_total_wrapped_v10_6(vm_code):
     init_key = random.randint(100, 250)
-    # Mã hóa dữ liệu luồng máy ảo thành chuỗi Hex rác
-    hex_payload = "".join([f"{(b^((init_key+i)%256)):02X}" for i,b in enumerate(vm_code.encode())])
+    hex_payload = "".join([f"{(b^((init_key+i)%256)):02X}" for i, b in enumerate(vm_code.encode('utf-8'))])
     
-    # Tạo chuỗi rác toán học ngẫu nhiên
     junk_pieces = []
-    for _ in range(500):
-        v_junk = ''.join(random.choices(string.ascii_letters, k=6))
-        junk_pieces.append(f"local {v_junk}={random.randint(100,999)}")
+    for _ in range(1000):
+        v_junk = random_var()
+        rand_target = random.randint(50, 99999)
+        junk_pieces.append(f"local {v_junk}={obfuscate_to_mixed_math(rand_target)}")
     junk = ";".join(junk_pieces)
     
-    # Nén toàn bộ luồng mã hóa, rác, và lõi VM chạy trên đúng 1 dòng duy nhất
-    script = f"(function(...);{junk};local _s='{hex_payload}';local _k={init_key};local _b='';for i=1,#_s,2 do _b=_b..string.char(tonumber(string.sub(_s,i,i+1),16)~((_k+(i/2)+7)%256))end;local _vm='';for i=1,#_b do _vm=_vm..string.sub(_b,i,i) end;local _exec=function(_code) return (function() local _p=1;{vm_code} end)() end;_exec(_vm);end)(...)"
+    v_s, v_k, v_b = random_var(), random_var(), random_var()
+    
+    script = (
+        f"return(function(...) "
+            f"{junk};"
+            f"local {v_s}='{hex_payload}';"
+            f"local {v_k}={init_key};"
+            f"local {v_b}='';"
+            f"for i=1,#{v_s},2 do "
+                f"{v_b}={v_b}..string.char(tonumber(string.sub({v_s},i,i+1),16)~(({v_k}+(i/2)+7)%256))"
+            f"end;"
+            f"local _exec=function(_code) {vm_code} end;"
+            f"_exec({v_b});"
+        f"end)(...)"
+    )
     return script.strip().replace('\n', '')
-
-bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -57,13 +123,13 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please provide a valid file or code.")
-        
+    
     status_msg = await ctx.reply("Processing...")
     try:
         vm = RealLuaVM()
         bytecode, constants = vm.compile_to_bytecode(source_code)
         vm_core = vm.build_vm_interpreter(bytecode, constants)
-        final_script = get_final_script(vm_core)
+        final_script = ironbrew_total_wrapped_v10_6(vm_core)
         
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done.", file=discord.File(file_stream, filename="protected.lua"))
