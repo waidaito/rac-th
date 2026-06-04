@@ -30,7 +30,6 @@ def random_var(length=6):
 def obfuscate_core_math(target):
     """
     Bộ sinh toán học an toàn dành riêng cho lõi VM để tránh lỗi sai lệch toán tử ^ và /.
-    Chỉ dùng toán tử toán học cơ bản lồng ngoặc chặt chẽ.
     """
     current_val = target
     ops_pool = []
@@ -52,11 +51,9 @@ def obfuscate_core_math(target):
 def generate_clean_advanced_junk(target):
     """
     Hàm sinh rác siêu hỗn loạn dành riêng cho 2500 biến rác ngoài rìa.
-    Trộn lẫn Hex, số âm lồng, logic inline giúp đánh lừa decompiler tối đa.
     """
     junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
     
-    # Kiểu 1: Chuỗi toán tử cộng trừ mã Hex lồng nhau liên tục
     if junk_mode == 'hex_ops_pool':
         current_val = target
         ops_pool = []
@@ -74,14 +71,12 @@ def generate_clean_advanced_junk(target):
             expr = f"({expr}{action})"
         return f"({expr})"
         
-    # Kiểu 2: Số âm lồng nhau đảo dấu toán học dịch số
     elif junk_mode == 'negative_double':
         offset1 = random.randint(50000, 200000)
         offset2 = random.randint(10000, 40000)
         base = target + offset1 - offset2
         return f"(-(-{base}-{hex(offset1)})+{hex(offset2)})"
         
-    # Kiểu 3: Toán tử logic Boolean Inline tự triệt tiêu về số gốc
     elif junk_mode == 'logical_inline':
         rand_check = random.randint(100, 1000)
         rand_adder = random.randint(5000, 15000)
@@ -90,40 +85,52 @@ def generate_clean_advanced_junk(target):
         else:
             return f"({target + rand_adder} - ({rand_check} < 50 and 0 or {rand_adder}))"
             
-    # Kiểu 4: Hỗn hợp số cơ bản lồng toán học gốc
     else:
         return obfuscate_core_math(target)
 
-def ironbrew_total_wrapped_v10_6(source_code):
-    init_key = random.randint(100, 250)
+def ironbrew_total_wrapped_v12_0(source_code):
+    # TĂNG CƯỜNG BẢO MẬT: Mở rộng số lượng tầng khóa ngẫu nhiên lên từ 7 đến 12 tầng
+    keys_count = random.randint(7, 12)
+    keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
+    # Mã hóa Payload nguồn qua hệ thống Multi-Key Layer liên hoàn kết hợp khóa cuộn
     encrypted_hex_list = []
-    current_key = init_key
+    current_keys = list(keys_list)
+    
     for idx, byte in enumerate(source_code.encode('utf-8')):
-        cipher_byte = byte ^ current_key
+        cipher_byte = byte
+        # XOR xuôi dòng qua toàn bộ các lớp khóa
+        for k in current_keys:
+            cipher_byte = cipher_byte ^ k
+            
         encrypted_hex_list.append(f"{cipher_byte:02X}")
-        current_key = (current_key + idx + 7) % 256
+        
+        # Cuộn độc lập từng khóa với bước dịch (k_idx + 3)
+        for k_idx in range(len(current_keys)):
+            current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
 
-    # GIỮ NGUYÊN: Khối Hex Payload ở giữa cấu trúc tệp như cũ
     hex_payload = "".join(encrypted_hex_list)
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
     
-    # Mã hóa chuỗi từ khóa hệ thống "loadstring" và "load"
-    hex_loadstring = "".join([f"{ord(c) ^ init_key:02X}" for c in "loadstring"])
-    hex_load = "".join([f"{ord(c) ^ init_key:02X}" for c in "load"])
+    # Sử dụng cặp key đầu và cuối để mã hóa chuỗi hệ thống "loadstring" và "load"
+    hex_loadstring = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "loadstring"])
+    hex_load = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "load"])
     len_ls, len_l = len(hex_loadstring), len(hex_load)
     
-    # Sinh tên biến ngẫu nhiên
+    # Sinh tên biến ngẫu nhiên cho VM Lua
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_func, v_run = [random_var() for _ in range(4)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_idx, v_env = random_var(), random_var()
     v_str1, v_str2, v_t_idx, v_t_pair = [random_var() for _ in range(4)]
     v_h_ls, v_h_l = random_var(), random_var()
-    v_rolling_key, v_byte_idx = random_var(), random_var()
+    v_byte_idx = random_var()
+    
+    # Các biến cấu trúc mảng khóa mới
+    v_matrix, v_k_step, v_loop_k, v_offset_table = random_var(), random_var(), random_var(), random_var()
 
-    # Sinh 2500 dòng biến rác đa dạng thể loại cực nặng (Áp dụng cho đống rác ngoài rìa)
+    # Sinh 2500 dòng biến rác đa dạng thể loại bao bọc ngoài rìa
     junk_pieces = []
     for _ in range(2500):
         v_junk = random_var()
@@ -132,12 +139,25 @@ def ironbrew_total_wrapped_v10_6(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Lõi VM sử dụng bộ mã hóa lõi an toàn tuyệt đối để đảm bảo thực thi đúng logic toán tử Lua
+    # NÂNG CẤP CHÍ MẠNG: Đóng gói toàn bộ các Key thực và Hằng số cuộn vào cấu trúc Table ẩn danh
+    # Mỗi phần tử trong Table là một sub-table chứa: { [1] = Giá trị Key, [2] = Hằng số cuộn offset }
+    matrix_elements = []
+    for k_idx, k_val in enumerate(keys_list):
+        obf_val = obfuscate_core_math(k_val)
+        obf_offset = obfuscate_core_math(k_idx + 3)
+        matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
+        
+    # Xáo trộn thứ tự đưa vào mảng để phá cấu trúc tuyến tính (nhưng lưu giải mã ngược lại)
+    # Ở đây chúng ta đảo ngược mảng ngay từ lúc khởi tạo để vòng lặp giải mã duyệt từ 1 đến #mảng một cách tự nhiên
+    matrix_elements.reverse() 
+    lua_matrix_init = f"local {v_matrix}}={{{','.join(matrix_elements)}}};"
+
+    # Lõi trình thông dịch VM v12.0 sử dụng vòng lặp kín chống đếm dòng
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
         f"for {v_m}=0,7 do "
-        f"local {v_w}=({v_i}/({obfuscate_core_math(2)})^{v_m})%2; " # Đóng ngoặc bọc chặt hằng số 2
+        f"local {v_w}=({v_i}/({obfuscate_core_math(2)})^{v_m})%2; "
         f"local {v_res}=({v_j}/({obfuscate_core_math(2)})^{v_m})%2; "
         f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+({obfuscate_core_math(2)})^{v_m} end "
         f"end "
@@ -150,25 +170,38 @@ def ironbrew_total_wrapped_v10_6(source_code):
         f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
         f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        f"local {v_rolling_key}={obfuscate_core_math(init_key)}; " # Obf init_key an toàn
+        f"{lua_matrix_init}" # Khởi tạo ma trận khóa dạng mảng
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
-        f"local {v_dec}={v_bit_func}({v_num},{v_rolling_key}); "
+        f"local {v_dec}={v_num}; "
+        
+        # VÒNG LẶP GIẢI MÃ KÍN: Chỉ có ĐÚNG 1 dòng gọi hàm giải mã XOR trơ trọi!
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
+        f"end; "
+        
         f"{v_buffer}={v_buffer}..string.char({v_dec}); "
-        f"{v_rolling_key}=({v_rolling_key}+{v_byte_idx}+{obfuscate_core_math(7)})%256; "
+        
+        # VÒNG LẶP CUỘN KHÓA KÍN: Tự động cuộn toàn bộ mảng khóa đồng bộ
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
+        f"end; "
+        
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
         f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
+        # Lấy phần tử cuối cùng và đầu tiên trong ma trận (tương ứng ban đầu) để giải mã loadstring/load
+        f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
         f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_core_math(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{v_k_step})) end "
         f"end; "
         f"for {v_t_idx}=1,{obfuscate_core_math(len_l)},2 do "
         f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_core_math(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{v_k_step})) end "
         f"end; "
         f"local {v_env}=getfenv(); "
         f"local {v_func}={v_env}[{v_str1}] or {v_env}[{v_str2}]; "
@@ -191,11 +224,11 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please provide a valid file or code.")
-    status_msg = await ctx.reply("Processing...")
+    status_msg = await ctx.reply("Securing with Loop Matrix Engine v12.0...")
     try:
-        final_script = ironbrew_total_wrapped_v10_6(source_code)
+        final_script = ironbrew_total_wrapped_v12_0(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done.", file=discord.File(file_stream, filename="message.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done. Script matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
     except Exception as e:
         await status_msg.delete()
