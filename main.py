@@ -30,7 +30,7 @@ def random_var(length=6):
 def obfuscate_to_skid_math(target):
     """
     Hàm đổi số thành rác toán học chuỗi ngầm dựa trên độ dài chuỗi chửi skid.
-    Giữ nguyên logic trả về một biểu thức tính toán nhưng thay thế hoàn toàn số tĩnh.
+    Đổi toàn bộ nháy kép " thành nháy đơn ' để tránh xung đột cú pháp khi nén 1 dòng.
     """
     skid_quotes = [
         "go learn lua instead of skidding my script",
@@ -52,16 +52,16 @@ def obfuscate_to_skid_math(target):
     
     if style == 'add_len':
         base = target + q_len
-        return f"({base}-#\"{quote}\")"
+        return f"({base}-#'{quote}')"
     elif style == 'sub_len':
         base = target - q_len
-        return f"({base}+#\"{quote}\")"
+        return f"({base}+#'{quote}')"
     else:
         rand_offset = random.randint(5000, 25000)
         base = target + rand_offset - q_len
         display_base = hex(base) if random.choice([True, False]) else str(base)
         display_offset = hex(rand_offset) if random.choice([True, False]) else str(rand_offset)
-        return f"(({display_base}-{display_offset})+#\"{quote}\")"
+        return f"(({display_base}-{display_offset})+#Layout_Fix_'{quote}')".replace("Layout_Fix_", "")
 
 def ironbrew_total_wrapped_v10_6(source_code):
     # Khóa gốc ban đầu sinh ngẫu nhiên
@@ -93,7 +93,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
     v_h_ls, v_h_l = random_var(), random_var()
     v_rolling_key, v_byte_idx = random_var(), random_var()
 
-    # GIỮ NGUYÊN vị trí đống rác: Thay thế nội dung số thành toán học chuỗi nâng cao
+    # GIỮ NGUYÊN vị trí đống rác: Thay thế nội dung số thành toán học chuỗi nháy đơn an toàn
     junk_pieces = []
     for _ in range(2500):
         v_junk = random_var()
@@ -102,7 +102,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Lõi thực thi áp dụng rác toán học chuỗi mới vào hằng số hệ thống
+    # Lõi thực thi áp dụng nháy đơn toàn bộ để tránh lỗi ngắt chuỗi
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -114,9 +114,9 @@ def ironbrew_total_wrapped_v10_6(source_code):
         f"return {v_x} "
         f"end; "
         f"local {v_bytecode}={bytecode_string_block}; "
-        f"local {v_h_ls}=\"{hex_loadstring}\"; "
-        f"local {v_h_l}=\"{hex_load}\"; "
-        f"local {v_buffer}\"\"; "
+        f"local {v_h_ls}='{hex_loadstring}'; "
+        f"local {v_h_l}='{hex_load}'; "
+        f"local {v_buffer}=''; "
         f"for {v_loop_idx}={obfuscate_to_skid_math(1)},{obfuscate_to_skid_math(2)} do "
         f"if {v_loop_idx}=={obfuscate_to_skid_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
@@ -131,7 +131,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
         f"elseif {v_loop_idx}=={obfuscate_to_skid_math(2)} then "
-        f"local {v_str1}, {v_str2} = \"\", \"\"; "
+        f"local {v_str1}, {v_str2} = '', ''; "
         f"for {v_t_idx}=1,{obfuscate_to_skid_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
         f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_to_skid_math(init_key)})) end "
