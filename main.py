@@ -27,10 +27,10 @@ def random_var(length=6):
     rest = ''.join(random.choices(string.ascii_letters + string.digits, k=length-1))
     return first + rest
 
-def obfuscate_to_skid_math(target):
+def generate_advanced_junk(target):
     """
-    Hàm đổi số thành rác toán học chuỗi ngầm dựa trên độ dài chuỗi chửi skid.
-    Đổi toàn bộ nháy kép " thành nháy đơn ' để tránh xung đột cú pháp khi nén 1 dòng.
+    Hàm sinh rác đa thể loại: Trộn lẫn toán học chuỗi #, số âm lồng nhau,
+    hex liên chuỗi và toán tử logic điều kiện. Đảm bảo an toàn cú pháp 100%.
     """
     skid_quotes = [
         "go learn lua instead of skidding my script",
@@ -46,22 +46,45 @@ def obfuscate_to_skid_math(target):
         "imagine spending hours reversing a script"
     ]
     
-    quote = random.choice(skid_quotes)
-    q_len = len(quote)
-    style = random.choice(['add_len', 'sub_len', 'heavy_mixed'])
+    junk_mode = random.choice(['skid_string_math', 'negative_math', 'hex_ops_pool', 'logical_inline'])
     
-    if style == 'add_len':
-        base = target + q_len
-        return f"({base}-#'{quote}')"
-    elif style == 'sub_len':
-        base = target - q_len
-        return f"({base}+#'{quote}')"
+    # Kiểu 1: Rác toán học chuỗi chửi skid (Bọc nháy đơn để tránh lỗi xung đột dòng)
+    if junk_mode == 'skid_string_math':
+        quote = random.choice(skid_quotes)
+        q_len = len(quote)
+        if random.choice([True, False]):
+            return f"({target + q_len}-#'{quote}')"
+        else:
+            return f"({target - q_len}+#'{quote}')"
+            
+    # Kiểu 2: Toán học số âm lồng nhau đảo dấu liên tục
+    elif junk_mode == 'negative_math':
+        rand_num = random.randint(2000, 8000)
+        return f"(-(-{target} - {rand_num}) + {rand_num})"
+        
+    # Kiểu 3: Chuỗi toán tử cộng trừ Hex ngẫu nhiên
+    elif junk_mode == 'hex_ops_pool':
+        current_val = target
+        ops_pool = []
+        for _ in range(random.randint(2, 3)):
+            op = random.choice(['+', '-'])
+            rand_num = random.randint(50000, 200000)
+            if op == '+':
+                current_val -= rand_num
+                ops_pool.append(f"+{hex(rand_num)}")
+            else:
+                current_val += rand_num
+                ops_pool.append(f"-{hex(rand_num)}")
+        
+        expr = hex(current_val)
+        for action in reversed(ops_pool):
+            expr = f"({expr}{action})"
+        return f"({expr})"
+        
+    # Kiểu 4: Biến đổi logic điều kiện inline
     else:
-        rand_offset = random.randint(5000, 25000)
-        base = target + rand_offset - q_len
-        display_base = hex(base) if random.choice([True, False]) else str(base)
-        display_offset = hex(rand_offset) if random.choice([True, False]) else str(rand_offset)
-        return f"(({display_base}-{display_offset})+#Layout_Fix_'{quote}')".replace("Layout_Fix_", "")
+        rand_num = random.randint(100, 500)
+        return f"({target} + ({rand_num} > 50 and 0 or 0))"
 
 def ironbrew_total_wrapped_v10_6(source_code):
     # Khóa gốc ban đầu sinh ngẫu nhiên
@@ -74,7 +97,7 @@ def ironbrew_total_wrapped_v10_6(source_code):
         encrypted_hex_list.append(f"{cipher_byte:02X}")
         current_key = (current_key + idx + 7) % 256
 
-    # GIỮ NGUYÊN: Khối Hex Payload nằm ở giữa như cũ
+    # GIỮ NGUYÊN: Khối Hex Payload chính xác nằm ở giữa cấu trúc tệp
     hex_payload = "".join(encrypted_hex_list)
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
@@ -93,52 +116,52 @@ def ironbrew_total_wrapped_v10_6(source_code):
     v_h_ls, v_h_l = random_var(), random_var()
     v_rolling_key, v_byte_idx = random_var(), random_var()
 
-    # GIỮ NGUYÊN vị trí đống rác: Thay thế nội dung số thành toán học chuỗi nháy đơn an toàn
+    # Sinh 2500 dòng biến rác đa dạng thể loại ở hai đầu tệp
     junk_pieces = []
     for _ in range(2500):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
-        junk_pieces.append(f"local {v_junk}={obfuscate_to_skid_math(rand_target)}")
+        junk_pieces.append(f"local {v_junk}={generate_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Lõi thực thi áp dụng nháy đơn toàn bộ để tránh lỗi ngắt chuỗi
+    # Lõi VM áp dụng bộ sinh rác hỗn hợp và mã hóa (obf) hoàn toàn init_key bên trong
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
         f"for {v_m}=0,7 do "
-        f"local {v_w}=({v_i}/{obfuscate_to_skid_math(2)}^{v_m})%2; "
-        f"local {v_res}=({v_j}/{obfuscate_to_skid_math(2)}^{v_m})%2; "
-        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+{obfuscate_to_skid_math(2)}^{v_m} end "
+        f"local {v_w}=({v_i}/{generate_advanced_junk(2)}^{v_m})%2; "
+        f"local {v_res}=({v_j}/{generate_advanced_junk(2)}^{v_m})%2; "
+        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+{generate_advanced_junk(2)}^{v_m} end "
         f"end "
         f"return {v_x} "
         f"end; "
         f"local {v_bytecode}={bytecode_string_block}; "
-        f"local {v_h_ls}='{hex_loadstring}'; "
-        f"local {v_h_l}='{hex_load}'; "
-        f"local {v_buffer}=''; "
-        f"for {v_loop_idx}={obfuscate_to_skid_math(1)},{obfuscate_to_skid_math(2)} do "
-        f"if {v_loop_idx}=={obfuscate_to_skid_math(1)} then "
+        f"local {v_h_ls}=\"{hex_loadstring}\"; "
+        f"local {v_h_l}=\"{hex_load}\"; "
+        f"local {v_buffer}=\"\"; "
+        f"for {v_loop_idx}={generate_advanced_junk(1)},{generate_advanced_junk(2)} do "
+        f"if {v_loop_idx}=={generate_advanced_junk(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        f"local {v_rolling_key}={obfuscate_to_skid_math(init_key)}; " 
+        f"local {v_rolling_key}={generate_advanced_junk(init_key)}; "  # Mã hóa init_key ở đây
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_bit_func}({v_num},{v_rolling_key}); "
         f"{v_buffer}={v_buffer}..string.char({v_dec}); "
-        f"{v_rolling_key}=({v_rolling_key}+{v_byte_idx}+{obfuscate_to_skid_math(7)})%256; "
+        f"{v_rolling_key}=({v_rolling_key}+{v_byte_idx}+{generate_advanced_junk(7)})%256; "
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
-        f"elseif {v_loop_idx}=={obfuscate_to_skid_math(2)} then "
-        f"local {v_str1}, {v_str2} = '', ''; "
-        f"for {v_t_idx}=1,{obfuscate_to_skid_math(len_ls)},2 do "
+        f"elseif {v_loop_idx}=={generate_advanced_junk(2)} then "
+        f"local {v_str1}, {v_str2} = \"\", \"\"; "
+        f"for {v_t_idx}=1,{generate_advanced_junk(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_to_skid_math(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{generate_advanced_junk(init_key)})) end " # Mã hóa init_key
         f"end; "
-        f"for {v_t_idx}=1,{obfuscate_to_skid_math(len_l)},2 do "
+        f"for {v_t_idx}=1,{generate_advanced_junk(len_l)},2 do "
         f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{obfuscate_to_skid_math(init_key)})) end "
+        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{generate_advanced_junk(init_key)})) end " # Mã hóa init_key
         f"end; "
         f"local {v_env}=getfenv(); "
         f"local {v_func}={v_env}[{v_str1}] or {v_env}[{v_str2}]; "
