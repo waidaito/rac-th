@@ -88,8 +88,8 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def ironbrew_total_wrapped_v12_0(source_code):
-    # TĂNG CƯỜNG BẢO MẬT: Mở rộng số lượng tầng khóa ngẫu nhiên lên từ 7 đến 12 tầng
+def ironbrew_total_wrapped_v12_1(source_code):
+    # Thiết lập số lượng tầng khóa ngẫu nhiên từ 7 đến 12 tầng độc lập
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
@@ -128,7 +128,7 @@ def ironbrew_total_wrapped_v12_0(source_code):
     v_byte_idx = random_var()
     
     # Các biến cấu trúc mảng khóa mới
-    v_matrix, v_k_step, v_loop_k, v_offset_table = random_var(), random_var(), random_var(), random_var()
+    v_matrix, v_k_step, v_loop_k = random_var(), random_var(), random_var()
 
     # Sinh 2500 dòng biến rác đa dạng thể loại bao bọc ngoài rìa
     junk_pieces = []
@@ -139,20 +139,20 @@ def ironbrew_total_wrapped_v12_0(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # NÂNG CẤP CHÍ MẠNG: Đóng gói toàn bộ các Key thực và Hằng số cuộn vào cấu trúc Table ẩn danh
-    # Mỗi phần tử trong Table là một sub-table chứa: { [1] = Giá trị Key, [2] = Hằng số cuộn offset }
+    # Đóng gói toàn bộ các Key thực và Hằng số cuộn vào cấu trúc Table ẩn danh
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         obf_val = obfuscate_core_math(k_val)
         obf_offset = obfuscate_core_math(k_idx + 3)
         matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
         
-    # Xáo trộn thứ tự đưa vào mảng để phá cấu trúc tuyến tính (nhưng lưu giải mã ngược lại)
-    # Ở đây chúng ta đảo ngược mảng ngay từ lúc khởi tạo để vòng lặp giải mã duyệt từ 1 đến #mảng một cách tự nhiên
+    # Đảo ngược mảng phần tử để vòng lặp giải mã duyệt từ 1 đến #mảng một cách tự nhiên (giải mã ngược thứ tự lúc mã hóa)
     matrix_elements.reverse() 
-    lua_matrix_init = f"local {v_matrix}}={{{','.join(matrix_elements)}}};"
+    
+    # ĐÃ FIX: Sửa dấu đóng mở ngoặc chính xác tránh lỗi cú pháp trong Lua sinh ra
+    lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # Lõi trình thông dịch VM v12.0 sử dụng vòng lặp kín chống đếm dòng
+    # Lõi trình thông dịch VM v12.1 sử dụng vòng lặp kín chống đếm dòng
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -170,7 +170,7 @@ def ironbrew_total_wrapped_v12_0(source_code):
         f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
         f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        f"{lua_matrix_init}" # Khởi tạo ma trận khóa dạng mảng
+        f"{lua_matrix_init} " # Nạp ma trận khóa đã sửa cú pháp chuẩn
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
@@ -193,7 +193,7 @@ def ironbrew_total_wrapped_v12_0(source_code):
         f"end "
         f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
-        # Lấy phần tử cuối cùng và đầu tiên trong ma trận (tương ứng ban đầu) để giải mã loadstring/load
+        f"{lua_matrix_init} " # Khởi tạo lại cấu trúc mảng để lấy lại giá trị Key gốc chính xác giải mã loadstring
         f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
         f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
@@ -224,9 +224,9 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please provide a valid file or code.")
-    status_msg = await ctx.reply("Securing with Loop Matrix Engine v12.0...")
+    status_msg = await ctx.reply("Securing with Loop Matrix Engine v12.1...")
     try:
-        final_script = ironbrew_total_wrapped_v12_0(source_code)
+        final_script = ironbrew_total_wrapped_v12_1(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done. Script matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
@@ -237,4 +237,3 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-
