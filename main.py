@@ -78,14 +78,12 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def ironbrew_total_wrapped_v13_0(source_code):
+def ironbrew_total_wrapped_v15_0(source_code):
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Mã hóa Payload nguồn qua hệ thống Multi-Key Layer liên hoàn kết hợp khóa cuộn
     encrypted_hex_list = []
     current_keys = list(keys_list)
-    
     for idx, byte in enumerate(source_code.encode('utf-8')):
         cipher_byte = byte
         for k in current_keys:
@@ -109,31 +107,55 @@ def ironbrew_total_wrapped_v13_0(source_code):
     v_str1, v_str2, v_t_idx, v_t_pair = [random_var() for _ in range(4)]
     v_h_ls, v_h_l = random_var(), random_var()
     v_byte_idx = random_var()
-    
     v_matrix, v_k_step, v_loop_k = random_var(), random_var(), random_var()
     
-    # TÊN BIẾN MỚI CHO CƠ CHẾ ẨN PHÂN TÍCH
-    v_hex_stream, v_s_idx, v_p1, v_p2 = random_var(), random_var(), random_var(), random_var()
+    # Biến v15.0 phục vụ trích xuất động môi trường rác
+    v_garbage, v_map_str, v_g_idx, v_pos, v_is_k = [random_var() for _ in range(5)]
 
-    junk_pieces = []
-    for _ in range(2500):
-        v_junk = random_var()
-        rand_target = random.randint(50, 99999)
-        junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
-    half = len(junk_pieces) // 2
-    junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
+    # Chuẩn bị danh sách 2500 dòng rác
+    total_junk_count = 2500
+    junk_lines = []
     
-    # NÂNG CẤP CHÍ MẠNG: Gom toàn bộ Key và Offset vào 1 chuỗi Hex phẳng duy nhất
-    # Đảo ngược thứ tự đưa vào chuỗi giống bản v12.1 để logic giải mã khớp chuẩn
+    # Đảo ngược Key chuẩn logic giải mã
     reversed_keys = list(enumerate(keys_list))
     reversed_keys.reverse()
     
-    flat_hex_keys = ""
+    # Tạo danh sách các cặp biến chứa Key và Offset thật
+    secret_variables = []
     for k_idx, k_val in reversed_keys:
-        offset_val = k_idx + 3
-        flat_hex_keys += f"{k_val:02X}{offset_val:02X}" # Mỗi cặp chiếm đúng 4 ký tự Hex
+        var_k = random_var()
+        var_o = random_var()
+        secret_variables.append({"var": var_k, "val": obfuscate_core_math(k_val), "is_key": True})
+        secret_variables.append({"var": var_o, "val": obfuscate_core_math(k_idx + 3), "is_key": False})
+        
+    # Chọn các vị trí ngẫu nhiên trong đống rác từ dòng 100 đến 2400 để giấu các biến bí mật này vào
+    secret_positions = sorted(random.sample(range(100, total_junk_count - 100), len(secret_variables)))
+    
+    # Bản đồ vị trí để nạp lại vào VM dưới dạng Hex phẳng (Mỗi vị trí cách nhau bởi dấu gạch ngang)
+    pointer_map_elements = []
+    
+    sec_idx = 0
+    for i in range(total_junk_count):
+        if sec_idx < len(secret_variables) and i == secret_positions[sec_idx]:
+            sec_data = secret_variables[sec_idx]
+            # Tạo dòng gán biến trông hoàn toàn giống rác thường
+            junk_lines.append(f"local {sec_data['var']}={sec_data['val']}")
+            # Ghi nhận vị trí (Index trong mảng Lua bắt đầu từ 1)
+            lua_index = i + 1
+            pointer_map_elements.append(f"{lua_index:04X}")
+            sec_idx += 1
+        else:
+            v_junk = random_var()
+            rand_target = random.randint(50, 99999)
+            junk_lines.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
+            
+    # Kết nối toàn bộ đống rác lại làm một thể thống nhất, không phân tách top/bottom nữa!
+    massive_junk_block = ";".join(junk_lines)
+    
+    # Chuỗi bản đồ vị trí phẳng
+    flat_pointer_map = "-".join(pointer_map_elements)
 
-    # Khởi tạo lõi trình thông dịch VM v13.0
+    # Lõi trình thông dịch VM v15.0 Stealth Matrix Engine
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -152,14 +174,19 @@ def ironbrew_total_wrapped_v13_0(source_code):
         f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
         
-        # LÕI GIẢI NÉN KEY ĐỘNG (Runtime Matrix Builder):
-        # AI nhìn vào đây hoàn toàn MÙ thông tin, chỉ thấy 1 chuỗi phẳng trơ trọi!
-        f"local {v_hex_stream} = \"{flat_hex_keys}\"; "
+        # LÕI TRÍCH XUẤT KEY ẨN TỪ MÔI TRƯỜNG BIẾN TOÀN CỤC/CỤC BỘ (Stealth Harvester):
+        f"local {v_garbage} = {{getfenv()}}; " # Gom môi trường thực thi hiện tại
         f"local {v_matrix} = {{}}; "
-        f"for {v_s_idx}=1, #{v_hex_stream}, 4 do "
-        f"local {v_p1} = tonumber(string.sub({v_hex_stream}, {v_s_idx}, {v_s_idx}+1), 16); "
-        f"local {v_p2} = tonumber(string.sub({v_hex_stream}, {v_s_idx}+2, {v_s_idx}+3), 16); "
-        f"{v_matrix}[({v_s_idx}-1)/4 + 1] = {{{v_p1}, {v_p2}}}; "
+        f"local {v_map_str} = \"{flat_pointer_map}\"; "
+        f"local {v_is_k} = true; "
+        f"local {v_temp_k}; "
+        # VM tự động dò tìm các biến nằm ẩn trong đống rác dựa trên Pointer Map ngẫu nhiên
+        f"for {v_chunk} in string.gmatch({v_map_str}, \"[^-]+\") do "
+        f"local {v_pos} = tonumber({v_chunk}, 16); "
+        f"local {v_item} = d_env_vars[{v_pos}]; " # d_env_vars sẽ được khởi tạo bọc ngoài cùng file
+        f"if {v_is_k} then {v_temp_k} = {v_item}; {v_is_k} = false; else "
+        f"{v_matrix}[(# {v_matrix}) + 1] = {{{v_temp_k}, {v_item}}}; {v_is_k} = true; "
+        f"end; "
         f"end; "
         
         f"local {v_byte_idx}=0; "
@@ -167,8 +194,6 @@ def ironbrew_total_wrapped_v13_0(source_code):
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_num}; "
-        
-        # Vòng lặp giải mã và cuộn hoàn toàn kín kẽ
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
         f"end; "
@@ -181,13 +206,17 @@ def ironbrew_total_wrapped_v13_0(source_code):
         f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
         
-        # Nạp lại chuỗi phẳng để lấy lại Key phục vụ giải mã loadstring
-        f"local {v_hex_stream} = \"{flat_hex_keys}\"; "
+        # Đồng bộ hóa nạp lại Key phục vụ giải mã loadstring
         f"local {v_matrix} = {{}}; "
-        f"for {v_s_idx}=1, #{v_hex_stream}, 4 do "
-        f"local {v_p1} = tonumber(string.sub({v_hex_stream}, {v_s_idx}, {v_s_idx}+1), 16); "
-        f"local {v_p2} = tonumber(string.sub({v_hex_stream}, {v_s_idx}+2, {v_s_idx}+3), 16); "
-        f"{v_matrix}[({v_s_idx}-1)/4 + 1] = {{{v_p1}, {v_p2}}}; "
+        f"local {v_map_str} = \"{flat_pointer_map}\"; "
+        f"local {v_is_k} = true; "
+        f"local {v_temp_k}; "
+        f"for {v_chunk} in string.gmatch({v_map_str}, \"[^-]+\") do "
+        f"local {v_pos} = tonumber({v_chunk}, 16); "
+        f"local {v_item} = d_env_vars[{v_pos}]; "
+        f"if {v_is_k} then {v_temp_k} = {v_item}; {v_is_k} = false; else "
+        f"{v_matrix}[(# {v_matrix}) + 1] = {{{v_temp_k}, {v_item}}}; {v_is_k} = true; "
+        f"end; "
         f"end; "
         
         f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
@@ -207,7 +236,22 @@ def ironbrew_total_wrapped_v13_0(source_code):
         f"end"
     )
     
-    total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
+    # Kỹ thuật bọc mảng môi trường cục bộ để thu thập biến rác tự động
+    wrapped_payload = (
+        f"local d_env_vars = {{}}; "
+        f"local function register_env(idx, val) d_env_vars[idx] = val; return val; end; "
+    )
+    
+    # Chèn hàm register_env vào từng dòng rác để đưa giá trị vào mảng theo dõi động
+    stealth_junk_list = []
+    for idx, line in enumerate(junk_lines):
+        # Biến đổi local abc = xyz thành local abc = register_env(idx, xyz)
+        fixed_line = line.replace("=", f"= register_env({idx+1}, ") + ")"
+        stealth_junk_list.append(fixed_line)
+        
+    final_stealth_junk = ";".join(stealth_junk_list)
+    
+    total_payload = f"{wrapped_payload}{final_stealth_junk};{bit_and_interpreter_core}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) {clean_payload} end)(...)"
 
@@ -220,9 +264,9 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please provide a valid file or code.")
-    status_msg = await ctx.reply("Securing with Loop Matrix Engine v13.0...")
+    status_msg = await ctx.reply("Securing with Ultimate Ghost Engine v15.0...")
     try:
-        final_script = ironbrew_total_wrapped_v13_0(source_code)
+        final_script = ironbrew_total_wrapped_v15_0(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done. Script matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
@@ -233,4 +277,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-        
+
