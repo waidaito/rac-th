@@ -43,13 +43,10 @@ def obfuscate_core_math(target):
     expr = hex(current_val) if start_style == 'hex' else str(current_val)
     for action in reversed(ops_pool):
         expr = f"({expr}{action})"
-    
-    # FIX: Loại bỏ hoàn toàn mọi ký tự xuống dòng rác phát sinh từ Python
     return f"({expr})".replace('\n', '').strip()
 
 def generate_clean_advanced_junk(target):
     junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
-    
     if junk_mode == 'hex_ops_pool':
         current_val = target
         ops_pool = []
@@ -66,13 +63,11 @@ def generate_clean_advanced_junk(target):
         for action in reversed(ops_pool):
             expr = f"({expr}{action})"
         return f"({expr})".replace('\n', '').strip()
-        
     elif junk_mode == 'negative_double':
         offset1 = random.randint(50000, 200000)
         offset2 = random.randint(10000, 40000)
         base = target + offset1 - offset2
         return f"(-(-{base}-{hex(offset1)})+{hex(offset2)})"
-        
     elif junk_mode == 'logical_inline':
         rand_check = random.randint(100, 1000)
         rand_adder = random.randint(5000, 15000)
@@ -80,17 +75,14 @@ def generate_clean_advanced_junk(target):
             return f"({target - rand_adder} + ({rand_check} > 50 and {rand_adder} or 0))"
         else:
             return f"({target + rand_adder} - ({rand_check} < 50 and 0 or {rand_adder}))"
-            
     else:
         return obfuscate_core_math(target)
 
 def ironbrew_wearedevs_pure_fixed(source_code):
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
-    
     encrypted_hex_list = []
     current_keys = list(keys_list)
-    
     for idx, byte in enumerate(source_code.encode('utf-8')):
         cipher_byte = byte
         for k in current_keys:
@@ -98,17 +90,14 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         encrypted_hex_list.append(f"{cipher_byte:02X}")
         for k_idx in range(len(current_keys)):
             current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
-
     hex_payload = "".join(encrypted_hex_list)
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
-    
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_run = [random_var() for _ in range(3)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_k, v_matrix = random_var(), random_var()
     v_p_env, v_p_loader = random_var(), random_var()
-    
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -116,14 +105,13 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
-    
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
     matrix_elements.reverse() 
-    
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
-
+    
+    # ĐÃ FIX: Điền lại đầy đủ các cấu trúc vòng lặp for bị cắt cụt
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -157,14 +145,10 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         f"if {v_run} then {v_run}() end "
         f"end"
     )
-    
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    
-    # 1. Xử lý 'loadstring' thành một hàng ngang gọn gàng
     loadstring_ascii = [108, 111, 97, 100, 115, 116, 114, 105, 110, 103]
     math_loadstring = [obfuscate_core_math(char) for char in loadstring_ascii]
-    
     v_l_str, v_l_idx, v_l_val = random_var(), random_var(), random_var()
     gate_loadstring = (
         f"(function() "
@@ -175,11 +159,8 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         f"return {v_l_str} "
         f"end)()"
     )
-    
-    # 2. Xử lý 'execute' thành một hàng ngang gọn gàng
     execute_ascii = [101, 120, 101, 99, 117, 116, 101]
     math_execute = [obfuscate_core_math(char) for char in execute_ascii]
-    
     v_e_str, v_e_idx, v_e_val = random_var(), random_var(), random_var()
     gate_execute = (
         f"(function() "
@@ -190,16 +171,12 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         f"return {v_e_str} "
         f"end)()"
     )
-    
     footer_args = (
         f"getfenv and getfenv() or _ENV, "
         f"loadstring or load or (getgenv and getgenv() or _G)[{gate_execute}] or (getgenv and getgenv() or _G)[{gate_loadstring}]"
     )
-    
-    # Làm sạch toàn bộ khoảng trắng thừa của khối footer, ép dàn ngang tuyệt đối
     clean_footer_args = " ".join(footer_args.splitlines()).strip()
-    
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.6 Pure Math-Gate --\nreturn (function(...) return (function({v_p_env}, {v_p_loader}) {clean_payload} end)(...) end)({clean_footer_args})"
+    return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn (function(...) return (function({v_p_env}, {v_p_loader}) {clean_payload} end)(...) end)({clean_footer_args})"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -210,11 +187,11 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.6 Premium Engine...")
+    status_msg = await ctx.reply("Processing ")
     try:
         final_script = ironbrew_wearedevs_pure_fixed(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="protected_script.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
     except Exception as e:
         if status_msg:
