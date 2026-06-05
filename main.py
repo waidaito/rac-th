@@ -28,9 +28,6 @@ def random_var(length=6):
     return first + rest
 
 def obfuscate_core_math(target):
-    """
-    Bộ sinh toán học an toàn dành riêng cho lõi VM để tránh lỗi sai lệch toán tử ^ và /.
-    """
     current_val = target
     ops_pool = []
     for _ in range(random.randint(2, 3)):
@@ -49,9 +46,6 @@ def obfuscate_core_math(target):
     return f"({expr})"
 
 def generate_clean_advanced_junk(target):
-    """
-    Hàm sinh rác siêu hỗn loạn dành riêng cho 2500 biến rác ngoài rìa.
-    """
     junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
     
     if junk_mode == 'hex_ops_pool':
@@ -89,23 +83,19 @@ def generate_clean_advanced_junk(target):
         return obfuscate_core_math(target)
 
 def ironbrew_total_wrapped_v12_1(source_code):
-    # Thiết lập số lượng tầng khóa ngẫu nhiên từ 7 đến 12 tầng độc lập
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Mã hóa Payload nguồn qua hệ thống Multi-Key Layer liên hoàn kết hợp khóa cuộn
     encrypted_hex_list = []
     current_keys = list(keys_list)
     
     for idx, byte in enumerate(source_code.encode('utf-8')):
         cipher_byte = byte
-        # XOR xuôi dòng qua toàn bộ các lớp khóa
         for k in current_keys:
             cipher_byte = cipher_byte ^ k
             
         encrypted_hex_list.append(f"{cipher_byte:02X}")
         
-        # Cuộn độc lập từng khóa với bước dịch (k_idx + 3)
         for k_idx in range(len(current_keys)):
             current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
 
@@ -113,12 +103,10 @@ def ironbrew_total_wrapped_v12_1(source_code):
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
     
-    # Sử dụng cặp key đầu và cuối để mã hóa chuỗi hệ thống "loadstring" và "load"
     hex_loadstring = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "loadstring"])
     hex_load = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "load"])
     len_ls, len_l = len(hex_loadstring), len(hex_load)
     
-    # Sinh tên biến ngẫu nhiên cho VM Lua
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_func, v_run = [random_var() for _ in range(4)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
@@ -127,32 +115,26 @@ def ironbrew_total_wrapped_v12_1(source_code):
     v_h_ls, v_h_l = random_var(), random_var()
     v_byte_idx = random_var()
     
-    # Các biến cấu trúc mảng khóa mới
     v_matrix, v_k_step, v_loop_k = random_var(), random_var(), random_var()
 
-    # Sinh 2500 dòng biến rác đa dạng thể loại bao bọc ngoài rìa
     junk_pieces = []
-    for _ in range(20000):
+    for _ in range(5000):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Đóng gói toàn bộ các Key thực và Hằng số cuộn vào cấu trúc Table ẩn danh
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         obf_val = obfuscate_core_math(k_val)
         obf_offset = obfuscate_core_math(k_idx + 3)
         matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
         
-    # Đảo ngược mảng phần tử để vòng lặp giải mã duyệt từ 1 đến #mảng một cách tự nhiên (giải mã ngược thứ tự lúc mã hóa)
     matrix_elements.reverse() 
     
-    # ĐÃ FIX: Sửa dấu đóng mở ngoặc chính xác tránh lỗi cú pháp trong Lua sinh ra
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # Lõi trình thông dịch VM v12.1 sử dụng vòng lặp kín chống đếm dòng
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -170,30 +152,24 @@ def ironbrew_total_wrapped_v12_1(source_code):
         f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
         f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        f"{lua_matrix_init} " # Nạp ma trận khóa đã sửa cú pháp chuẩn
+        f"{lua_matrix_init} "
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_num}; "
-        
-        # VÒNG LẶP GIẢI MÃ KÍN: Chỉ có ĐÚNG 1 dòng gọi hàm giải mã XOR trơ trọi!
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
         f"end; "
-        
         f"{v_buffer}={v_buffer}..string.char({v_dec}); "
-        
-        # VÒNG LẶP CUỘN KHÓA KÍN: Tự động cuộn toàn bộ mảng khóa đồng bộ
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
         f"end; "
-        
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
         f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
-        f"{lua_matrix_init} " # Khởi tạo lại cấu trúc mảng để lấy lại giá trị Key gốc chính xác giải mã loadstring
+        f"{lua_matrix_init} "
         f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
         f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
@@ -203,8 +179,15 @@ def ironbrew_total_wrapped_v12_1(source_code):
         f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
         f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{v_k_step})) end "
         f"end; "
-        f"local {v_env}=getfenv(); "
-        f"local {v_func}={v_env}[{v_str1}] or {v_env}[{v_str2}]; "
+        f"local {v_env} = _ENV or _G or getfenv(); "
+        f"local {v_func} = rawget({v_env}, {v_str1}) or rawget({v_env}, {v_str2}); "
+        f"if not {v_func} then "
+        f"for _, v in pairs({v_env}) do "
+        f"if type(v) == 'function' and pcall(function() return v == {v_env}[{v_str1}] or v == {v_env}[{v_str2}] end) then "
+        f"{v_func} = v; break; "
+        f"end "
+        f"end "
+        f"end; "
         f"local {v_run}={v_func}({v_buffer}); "
         f"if {v_run} then {v_run}(...) end "
         f"end "
