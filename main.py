@@ -82,139 +82,147 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
+def encrypt_string_with_matrix(plain_text, keys_list):
+    encrypted_list = []
+    current_keys = list(keys_list)
+    for idx, byte in enumerate(plain_text.encode('utf-8', errors='ignore')):
+        cipher_byte = byte
+        for k in current_keys:
+            cipher_byte = cipher_byte ^ k
+        encrypted_list.append(f"{cipher_byte:02X}")
+        for k_idx in range(len(current_keys)):
+            current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
+    return "".join(encrypted_list)
+
 def ironbrew_total_wrapped_v12_1(source_code):
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    encrypted_hex_list = []
-    current_keys = list(keys_list)
+    hex_payload = encrypt_string_with_matrix(source_code, keys_list)
+    hex_loadstring = encrypt_string_with_matrix("loadstring", keys_list)
+    hex_load = encrypt_string_with_matrix("load", keys_list)
     
-    for idx, byte in enumerate(source_code.encode('utf-8')):
-        cipher_byte = byte
-        for k in current_keys:
-            cipher_byte = cipher_byte ^ k
-            
-        encrypted_hex_list.append(f"{cipher_byte:02X}")
-        
-        for k_idx in range(len(current_keys)):
-            current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
-
-    hex_payload = "".join(encrypted_hex_list)
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
-    bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
-    
-    hex_loadstring = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "loadstring"])
-    hex_load = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "load"])
-    len_ls, len_l = len(hex_loadstring), len(hex_load)
+    bytecode_string_block = f"[===[{fake_signature}:{hex_payload}]===]"
+    h_ls_string_block = f"[===[{fake_signature}:{hex_loadstring}]===]"
+    h_l_string_block = f"[===[{fake_signature}:{hex_load}]===]"
     
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_func, v_run = [random_var() for _ in range(4)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_idx, v_env = random_var(), random_var()
-    v_str1, v_str2, v_t_idx, v_t_pair = [random_var() for _ in range(4)]
+    v_str1, v_str2 = random_var(), random_var()
     v_h_ls, v_h_l = random_var(), random_var()
     v_byte_idx = random_var()
-    
-    v_matrix, v_k_step, v_loop_k = random_var(), random_var(), random_var()
+    v_matrix, v_loop_k = random_var(), random_var()
+    v_succ, v_match = random_var(), random_var()
+    v_next, v_key_nxt, v_val_nxt = random_var(), random_var(), random_var()
+    v_clean_str, v_decrypt_func = random_var(), random_var()
+    v_tab, v_concat = random_var(), random_var()
 
+    # Tạo mã rác hiệu năng mượt mà ổn định
     junk_pieces = []
-    for _ in range(5000):
+    for _ in range(1000):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
-    junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
+    junk_top, junk_bottom = ";\n".join(junk_pieces[:half]), ";\n".join(junk_pieces[half:])
     
+    # Giữ nguyên cấu trúc thứ tự mảng để đồng bộ chính xác chỉ số k_idx với Python
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         obf_val = obfuscate_core_math(k_val)
         obf_offset = obfuscate_core_math(k_idx + 3)
         matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
         
-    matrix_elements.reverse() 
-    
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
     bit_and_interpreter_core = (
-        f"local function {v_bit_func}({v_i},{v_j}) "
-        f"local {v_x}=0; "
-        f"for {v_m}=0,7 do "
-        f"local {v_w}=({v_i}/({obfuscate_core_math(2)})^{v_m})%2; "
-        f"local {v_res}=({v_j}/({obfuscate_core_math(2)})^{v_m})%2; "
-        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+({obfuscate_core_math(2)})^{v_m} end "
-        f"end "
-        f"return {v_x} "
-        f"end; "
-        f"local {v_bytecode}={bytecode_string_block}; "
-        f"local {v_h_ls}=\"{hex_loadstring}\"; "
-        f"local {v_h_l}=\"{hex_load}\"; "
-        f"local {v_buffer}=\"\"; "
-        f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
-        f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
-        f"local h_clean=string.sub({v_bytecode},5); "
-        f"{lua_matrix_init} "
-        f"local {v_byte_idx}=0; "
-        f"for {v_idx}=1,#h_clean,2 do "
-        f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
-        f"local {v_num}=tonumber({v_pair},16); "
-        f"local {v_dec}={v_num}; "
-        f"for {v_loop_k}=1,#{v_matrix} do "
-        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
-        f"end; "
-        f"{v_buffer}={v_buffer}..string.char({v_dec}); "
-        f"for {v_loop_k}=1,#{v_matrix} do "
-        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
-        f"end; "
-        f"{v_byte_idx}={v_byte_idx}+1; "
-        f"end "
-        f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
-        f"local {v_str1}, {v_str2} = \"\", \"\"; "
-        f"{lua_matrix_init} "
-        f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
-        f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
-        f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),{v_k_step})) end "
-        f"end; "
-        f"for {v_t_idx}=1,{obfuscate_core_math(len_l)},2 do "
-        f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
-        f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),{v_k_step})) end "
-        f"end; "
-        f"local {v_env} = _ENV or _G or getfenv(); "
-        f"local {v_func} = rawget({v_env}, {v_str1}) or rawget({v_env}, {v_str2}); "
-        f"if not {v_func} then "
-        f"for _, v in pairs({v_env}) do "
-        f"if type(v) == 'function' and pcall(function() return v == {v_env}[{v_str1}] or v == {v_env}[{v_str2}] end) then "
-        f"{v_func} = v; break; "
-        f"end "
-        f"end "
-        f"end; "
-        f"local {v_run}={v_func}({v_buffer}); "
-        f"if {v_run} then {v_run}(...) end "
-        f"end "
-        f"end"
+        f"local function {v_bit_func}({v_i},{v_j})\n"
+        f"local {v_x}=0;\n"
+        f"for {v_m}=0,7 do\n"
+        f"local {v_w}=({v_i}/2^{v_m})%2;\n"
+        f"local {v_res}=({v_j}/2^{v_m})%2;\n"
+        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+2^{v_m} end\n"
+        f"end\n"
+        f"return {v_x}\n"
+        f"end;\n"
+        f"local {v_bytecode}={bytecode_string_block};\n"
+        f"local {v_h_ls}={h_ls_string_block};\n"
+        f"local {v_h_l}={h_l_string_block};\n"
+        f"local function {v_decrypt_func}({v_clean_str})\n"
+        f"local {v_tab}={{}};\n"
+        f"local {v_concat}=rawget(string, 'char') or string.char;\n"
+        f"{lua_matrix_init}\n"
+        f"local {v_byte_idx}=0;\n"
+        f"for {v_idx}=1,#{v_clean_str},2 do\n"
+        f"local {v_pair}=string.sub({v_clean_str},{v_idx},{v_idx}+1);\n"
+        f"local {v_num}=tonumber({v_pair},16);\n"
+        f"local {v_dec}={v_num};\n"
+        f"for {v_loop_k}=1,#{v_matrix} do\n"
+        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]);\n"
+        f"end;\n"
+        f"{v_tab}[#{v_tab}+1]={v_concat}({v_dec});\n"
+        f"for {v_loop_k}=1,#{v_matrix} do\n"
+        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256;\n"
+        f"end;\n"
+        f"{v_byte_idx}={v_byte_idx}+1;\n"
+        f"end;\n"
+        f"return table.concat({v_tab});\n"
+        f"end;\n"
+        f"local {v_buffer} = {v_decrypt_func}(string.sub({v_bytecode},5));\n"
+        f"local {v_str1} = {v_decrypt_func}(string.sub({v_h_ls},5));\n"
+        f"local {v_str2} = {v_decrypt_func}(string.sub({v_h_l},5));\n"
+        f"local {v_env} = _ENV or _G or getfenv();\n"
+        f"local {v_func} = rawget({v_env}, {v_str1}) or rawget({v_env}, {v_str2});\n"
+        f"if not {v_func} then\n"
+        f"local {v_next} = rawget({v_env}, 'next');\n"
+        f"if {v_next} then\n"
+        f"local {v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, nil);\n"
+        f"while {v_key_nxt} ~= nil do\n"
+        f"if type({v_val_nxt}) == 'function' then\n"
+        f"local {v_succ}, {v_match} = pcall(function() return {v_val_nxt} == rawget({v_env}, {v_str1}) or {v_val_nxt} == rawget({v_env}, {v_str2}) end);\n"
+        f"if {v_succ} and {v_match} then {v_func} = {v_val_nxt}; break; end\n"
+        f"end;\n"
+        f"{v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, {v_key_nxt});\n"
+        f"end\n"
+        f"end\n"
+        f"end;\n"
+        f"local {v_run}={v_func}({v_buffer});\n"
+        f"if {v_run} then {v_run}(...) end"
     )
     
-    total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
-    clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) {clean_payload} end)(...)"
+    total_payload = f"{junk_top};\n{bit_and_interpreter_core};\n{junk_bottom}"
+    return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) \n{total_payload}\nend)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
     source_code = None
     if ctx.message.attachments:
-        source_code = (await ctx.message.attachments[0].read()).decode(errors="ignore")
+        source_code = (await ctx.message.attachments[0].read()).decode("utf-8", errors="ignore")
     elif text_code:
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
+        
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
+        
     status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing ")
     try:
         final_script = ironbrew_total_wrapped_v12_1(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
-        await status_msg.delete()
+        
+        try:
+            await status_msg.delete()
+        except:
+            pass
+            
     except Exception as e:
-        await status_msg.delete()
+        try:
+            await status_msg.delete()
+        except:
+            pass
         await ctx.reply(f"Error: {str(e)}")
 
 if __name__ == "__main__":
