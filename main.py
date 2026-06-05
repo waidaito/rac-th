@@ -47,7 +47,6 @@ def obfuscate_core_math(target):
 
 def generate_clean_advanced_junk(target):
     junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
-    
     if junk_mode == 'hex_ops_pool':
         current_val = target
         ops_pool = []
@@ -64,13 +63,11 @@ def generate_clean_advanced_junk(target):
         for action in reversed(ops_pool):
             expr = f"({expr}{action})"
         return f"({expr})"
-        
     elif junk_mode == 'negative_double':
         offset1 = random.randint(50000, 200000)
         offset2 = random.randint(10000, 40000)
         base = target + offset1 - offset2
         return f"(-(-{base}-{hex(offset1)})+{hex(offset2)})"
-        
     elif junk_mode == 'logical_inline':
         rand_check = random.randint(100, 1000)
         rand_adder = random.randint(5000, 15000)
@@ -78,91 +75,23 @@ def generate_clean_advanced_junk(target):
             return f"({target - rand_adder} + ({rand_check} > 50 and {rand_adder} or 0))"
         else:
             return f"({target + rand_adder} - ({rand_check} < 50 and 0 or {rand_adder}))"
-            
     else:
         return obfuscate_core_math(target)
 
 def simple_lexer_to_opcodes(source_code):
-    """
-    Trình biên dịch cấu trúc (Compiler):
-    Bóc tách các lệnh cơ bản thành tập tin Opcode nhị phân.
-    """
     opcodes = []
     patterns = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*\"([^\"]*)\"\s*\)', source_code)
-    
     if not patterns:
-        opcodes.append({
-            "op": 99,  # OP_NATIVE_EXEC
-            "data": source_code
-        })
+        opcodes.append({"op": 99, "data": source_code})
     else:
         for func_name, str_arg in patterns:
-            opcodes.append({
-                "op": 10,  # OP_GET_GLOBAL
-                "data": func_name
-            })
-            opcodes.append({
-                "op": 20,  # OP_LOAD_CONST
-                "data": str_arg
-            })
-            opcodes.append({
-                "op": 30,  # OP_CALL_FUNCTION
-                "data": 1   
-            })
+            opcodes.append({"op": 10, "data": func_name})
+            opcodes.append({"op": 20, "data": str_arg})
+            opcodes.append({"op": 30, "data": 1})
     return opcodes
 
-def build_vm_interpreter(opcodes):
-    """
-    Xây dựng cấu trúc Trình thông dịch lõi VM kết hợp toán tử che giấu nâng cao.
-    """
-    v_pc, v_instructions, v_stack, v_env = [random_var() for _ in range(4)]
-    v_instr, v_op, v_data = [random_var() for _ in range(3)]
-    
-    lua_opcodes_list = []
-    for inst in opcodes:
-        op_val = obfuscate_core_math(inst["op"])
-        if isinstance(inst["data"], str):
-            hex_data = "".join([f"\\x{ord(c):02X}" for c in inst["data"]])
-            data_val = f'"{hex_data}"'
-        else:
-            data_val = obfuscate_core_math(inst["data"])
-        lua_opcodes_list.append(f"{{{op_val}, {data_val}}}")
-        
-    lua_instructions_table = f"local {v_instructions} = {{{','.join(lua_opcodes_list)}}}"
-    
-    # Lõi thực thi hoàn toàn không chứa 'elif', thay bằng 'elseif' chuẩn 100% Lua
-    vm_core = (
-        f"{lua_instructions_table}; "
-        f"local {v_pc} = 1; "
-        f"local {v_stack} = {{}}; "
-        f"local {v_env} = (getgenv and getgenv()) or _G or _ENV; "
-        f"while {v_pc} <= #{v_instructions} do "
-        f"local {v_instr} = {v_instructions}[{v_pc}]; "
-        f"local {v_op} = {v_instr}[1]; "
-        f"local {v_data} = {v_instr}[2]; "
-        f"if {v_op} == 10 then "
-        f"{v_stack}[#{v_stack}+1] = {v_env}[{v_data}]; "
-        f"elseif {v_op} == 20 then "
-        f"{v_stack}[#{v_stack}+1] = {v_data}; "
-        f"elseif {v_op} == 30 then "
-        f"local arg = {v_stack}[#{v_stack}]; "
-        f"local func = {v_stack}[#{v_stack}-1]; "
-        f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}-1] = nil; "
-        f"if func then func(arg) end; "
-        f"elseif {v_op} == 99 then "
-        f"local func_native = (loadstring or load); "
-        f"if func_native then "
-        f"local run = func_native({v_data}); "
-        f"if run then run(...) end; "
-        f"end; "
-        f"end; "
-        f"{v_pc} = {v_pc} + 1; "
-        f"end;"
-    )
-    return vm_core
-
-def ironbrew_total_wrapped_v13_vm(source_code):
-    # Sinh 5000 dòng biến rác toán học cực nặng bọc ngoài rìa như bản v12.1
+def ironbrew_ultimate_vm_v14(source_code):
+    # 1. Sinh 5000 dòng rác bọc ngoài
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -170,18 +99,107 @@ def ironbrew_total_wrapped_v13_vm(source_code):
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
-    
-    # Biên dịch mã nguồn sang tập chỉ thị Opcode nhị phân
+
+    # 2. Biên dịch code sang Opcode
     compiled_opcodes = simple_lexer_to_opcodes(source_code)
     
-    # Tạo lõi xử lý VM Interpreter
-    bit_and_interpreter_core = build_vm_interpreter(compiled_opcodes)
+    # 3. Tạo hệ thống KHÓA XOR CUỘN cho VM nâng cao giống bản v12.1
+    keys_count = random.randint(5, 8)
+    keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Đóng gói toàn bộ rác và lõi VM thành một khối chuỗi duy nhất
+    # Chuẩn bị dữ liệu để nén thành chuỗi Hex
+    raw_payload_data = []
+    for inst in compiled_opcodes:
+        # Định dạng cấu trúc lệnh: OP:DATA
+        raw_payload_data.append(f"{inst['op']}:{inst['data']}")
+    full_str_payload = "||".join(raw_payload_data)
+
+    # Tiến hành XOR cuộn chuỗi chỉ thị Opcode
+    encrypted_hex_list = []
+    current_keys = list(keys_list)
+    for idx, byte in enumerate(full_str_payload.encode('utf-8')):
+        cipher_byte = byte
+        for k in current_keys:
+            cipher_byte = cipher_byte ^ k
+        encrypted_hex_list.append(f"{cipher_byte:02X}")
+        for k_idx in range(len(current_keys)):
+            current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
+
+    hex_bytecode_stream = "".join(encrypted_hex_list)
+    bytecode_string_block = f"[=[XORVM:{hex_bytecode_stream}]=]"
+
+    # Tạo bảng ma trận khóa
+    matrix_elements = []
+    for k_idx, k_val in enumerate(keys_list):
+        matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
+    matrix_elements.reverse()
+
+    # Tên biến máy ảo
+    v_bit_func, v_i, v_j, v_x, v_m, v_w, v_res = [random_var() for _ in range(7)]
+    v_bytecode, v_matrix, v_byte_idx, v_idx, v_pair, v_num, v_dec, v_loop_k = [random_var() for _ in range(8)]
+    v_buffer, v_pc, v_instructions, v_stack, v_env, v_instr, v_op, v_data = [random_var() for _ in range(8)]
+    v_split, v_single, v_p_op, v_p_data = [random_var() for _ in range(4)]
+
+    # 4. Lõi Trình thông dịch VM kết hợp vòng lặp giải mã XOR xoay vòng
+    bit_and_interpreter_core = (
+        f"local function {v_bit_func}({v_i},{v_j}) "
+        f"local {v_x}=0; for {v_m}=0,7 do "
+        f"local {v_w}=({v_i}/2^{v_m})%2; local {v_res}=({v_j}/2^{v_m})%2; "
+        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+2^{v_m} end "
+        f"end return {v_x} "
+        f"end; "
+        f"local {v_bytecode} = {bytecode_string_block}; "
+        f"local h_clean = string.sub({v_bytecode}, 7); "
+        f"local {v_matrix} = {{{','.join(matrix_elements)}}}; "
+        f"local {v_byte_idx} = 0; "
+        f"local {v_buffer} = \"\"; "
+        f"for {v_idx}=1,#h_clean,2 do "
+        f"local {v_pair} = string.sub(h_clean,{v_idx},{v_idx}+1); "
+        f"local {v_num} = tonumber({v_pair},16); "
+        f"local {v_dec} = {v_num}; "
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
+        f"end; "
+        f"{v_buffer} = {v_buffer}..string.char({v_dec}); "
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
+        f"end; "
+        f"{v_byte_idx} = {v_byte_idx} + 1; "
+        f"end; "
+        # Khôi phục mảng cấu trúc Opcode từ chuỗi đã giải mã XOR
+        f"local {v_instructions} = {{}}; "
+        f"for {v_split} in string.gmatch({v_buffer}, \"([^|]+)\") do "
+        f"local {v_p_op}, {v_p_data} = string.match({v_split}, \"([^:]+):(.*)\"); "
+        f"local n_op = tonumber({v_p_op}); "
+        f"if n_op ~= 99 and string.sub({v_p_data},1,1) ~= \"\\\"\" then "
+        f"local hex_out = \"\"; for c_idx=1,#{v_p_data} do hex_out=hex_out..string.format(\"\\\\x%02X\",string.byte({v_p_data},c_idx)) end; "
+        f"{v_p_data} = hex_out; "
+        f"end; "
+        f"{v_instructions}[#{v_instructions}+1] = {{n_op, {v_p_data}}}; "
+        f"end; "
+        # Bắt đầu vòng lặp Dispatcher điều phối của Máy ảo (VM Loop)
+        f"local {v_pc} = 1; local {v_stack} = {{}}; "
+        f"local {v_env} = (getgenv and getgenv()) or _G or _ENV; "
+        f"while {v_pc} <= #{v_instructions} do "
+        f"local {v_instr} = {v_instructions}[{v_pc}]; "
+        f"local {v_op} = {v_instr}[1]; local {v_data} = {v_instr}[2]; "
+        f"if {v_op} == 10 then {v_stack}[#{v_stack}+1] = {v_env}[{v_data}]; "
+        f"elseif {v_op} == 20 then {v_stack}[#{v_stack}+1] = {v_data}; "
+        f"elseif {v_op} == 30 then "
+        f"local arg = {v_stack}[#{v_stack}]; local func = {v_stack}[#{v_stack}-1]; "
+        f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}-1] = nil; "
+        f"if func then func(arg) end; "
+        f"elseif {v_op} == 99 then "
+        f"local func_native = (loadstring or load); "
+        f"if func_native then local run = func_native({v_data}); if run then run(...) end end; "
+        f"end; "
+        f"{v_pc} = {v_pc} + 1; "
+        f"end;"
+    )
+
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    
-    return f"-- This file was protected by 8xms Architecture VM v13.0 --\nreturn(function(...) {clean_payload} end)(...)"
+    return f"-- Protected by 8xms Ultimate XOR-VM Architecture v14.0 --\nreturn(function(...) {clean_payload} end)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -192,9 +210,9 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Transpiling architecture into VM structures... ")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Transpiling into Ultimate XOR-VM structures... ")
     try:
-        final_script = ironbrew_total_wrapped_v13_vm(source_code)
+        final_script = ironbrew_ultimate_vm_v14(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
@@ -208,4 +226,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-        
+                                    
