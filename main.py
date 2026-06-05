@@ -8,9 +8,6 @@ import threading
 import os
 from flask import Flask
 
-# ----------------------------------------------------------------
-# KHỞI TẠO WEB SERVER ĐỂ KEEP BOT ALIVE (Dành cho Replit/UptimeRobot)
-# ----------------------------------------------------------------
 app = Flask(__name__)
 
 @app.route('/')
@@ -21,21 +18,19 @@ def run_server():
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)
 
-# ----------------------------------------------------------------
-# CẤU HÌNH DISCORD BOT
-# ----------------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# Hàm sinh tên biến ngẫu nhiên cho Lua VM
 def random_var(length=6):
     first = random.choice(string.ascii_letters)
     rest = ''.join(random.choices(string.ascii_letters + string.digits, k=length-1))
     return first + rest
 
-# Bộ sinh toán học đồng bộ tối giản - Đảm bảo cấu trúc an toàn tuyệt đối cho Lua
 def obfuscate_core_math(target):
+    """
+    Bộ sinh toán học an toàn dành riêng cho lõi VM để tránh lỗi sai lệch toán tử ^ và /.
+    """
     current_val = target
     ops_pool = []
     for _ in range(random.randint(2, 3)):
@@ -50,24 +45,67 @@ def obfuscate_core_math(target):
     start_style = random.choice(['normal', 'hex'])
     expr = hex(current_val) if start_style == 'hex' else str(current_val)
     for action in reversed(ops_pool):
-        expr = f"{expr}{action}"
+        expr = f"({expr}{action})"
     return f"({expr})"
 
-# ----------------------------------------------------------------
-# LÕI PHẦN MỀM MÃ HÓA V15.0 GHOST MATRIX ENGINE (FIXED SYNTAX)
-# ----------------------------------------------------------------
-def ironbrew_total_wrapped_v15_0(source_code):
+def generate_clean_advanced_junk(target):
+    """
+    Hàm sinh rác siêu hỗn loạn dành riêng cho 2500 biến rác ngoài rìa.
+    """
+    junk_mode = random.choice(['hex_ops_pool', 'negative_double', 'logical_inline', 'mixed_math_heavy'])
+    
+    if junk_mode == 'hex_ops_pool':
+        current_val = target
+        ops_pool = []
+        for _ in range(random.randint(2, 4)):
+            op = random.choice(['+', '-'])
+            rand_num = random.randint(100000, 1500000)
+            if op == '+':
+                current_val -= rand_num
+                ops_pool.append(f"+{hex(rand_num)}")
+            else:
+                current_val += rand_num
+                ops_pool.append(f"-{hex(rand_num)}")
+        expr = hex(current_val)
+        for action in reversed(ops_pool):
+            expr = f"({expr}{action})"
+        return f"({expr})"
+        
+    elif junk_mode == 'negative_double':
+        offset1 = random.randint(50000, 200000)
+        offset2 = random.randint(10000, 40000)
+        base = target + offset1 - offset2
+        return f"(-(-{base}-{hex(offset1)})+{hex(offset2)})"
+        
+    elif junk_mode == 'logical_inline':
+        rand_check = random.randint(100, 1000)
+        rand_adder = random.randint(5000, 15000)
+        if random.choice([True, False]):
+            return f"({target - rand_adder} + ({rand_check} > 50 and {rand_adder} or 0))"
+        else:
+            return f"({target + rand_adder} - ({rand_check} < 50 and 0 or {rand_adder}))"
+            
+    else:
+        return obfuscate_core_math(target)
+
+def ironbrew_total_wrapped_v12_1(source_code):
+    # Thiết lập số lượng tầng khóa ngẫu nhiên từ 7 đến 12 tầng độc lập
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
     # Mã hóa Payload nguồn qua hệ thống Multi-Key Layer liên hoàn kết hợp khóa cuộn
     encrypted_hex_list = []
     current_keys = list(keys_list)
+    
     for idx, byte in enumerate(source_code.encode('utf-8')):
         cipher_byte = byte
+        # XOR xuôi dòng qua toàn bộ các lớp khóa
         for k in current_keys:
             cipher_byte = cipher_byte ^ k
+            
         encrypted_hex_list.append(f"{cipher_byte:02X}")
+        
+        # Cuộn độc lập từng khóa với bước dịch (k_idx + 3)
         for k_idx in range(len(current_keys)):
             current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
 
@@ -75,7 +113,7 @@ def ironbrew_total_wrapped_v15_0(source_code):
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
     
-    # Mã hóa xáo trộn hàm nạp hệ thống loadstring và load
+    # Sử dụng cặp key đầu và cuối để mã hóa chuỗi hệ thống "loadstring" và "load"
     hex_loadstring = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "loadstring"])
     hex_load = "".join([f"{ord(c) ^ keys_list[0] ^ keys_list[-1]:02X}" for c in "load"])
     len_ls, len_l = len(hex_loadstring), len(hex_load)
@@ -88,50 +126,33 @@ def ironbrew_total_wrapped_v15_0(source_code):
     v_str1, v_str2, v_t_idx, v_t_pair = [random_var() for _ in range(4)]
     v_h_ls, v_h_l = random_var(), random_var()
     v_byte_idx = random_var()
+    
+    # Các biến cấu trúc mảng khóa mới
     v_matrix, v_k_step, v_loop_k = random_var(), random_var(), random_var()
-    
-    # Biến phục vụ trích xuất động ma trận từ môi trường ảo
-    v_map_str, v_chunk, v_pos, v_item, v_is_k = [random_var() for _ in range(5)]
-    v_temp_k, v_temp_o = random_var(), random_var()
 
-    total_junk_count = 2500  # Bro muốn tăng rác thì tăng con số này lên nhé
-    junk_lines = []
-    
-    # Đảo ngược Key theo logic giải mã cấu trúc stack
-    reversed_keys = list(enumerate(keys_list))
-    reversed_keys.reverse()
-    
-    # Chuẩn bị dữ liệu Key thật và Offset để rải vào đống rác
-    secret_variables = []
-    for k_idx, k_val in reversed_keys:
-        secret_variables.append({"val": obfuscate_core_math(k_val)})
-        secret_variables.append({"val": obfuscate_core_math(k_idx + 3)})
-        
-    # Xác định các vị trí ngẫu nhiên để giấu Key vào rừng rác
-    secret_positions = sorted(random.sample(range(100, total_junk_count - 100), len(secret_variables)))
-    pointer_map_elements = []
-    
-    sec_idx = 0
-    for i in range(total_junk_count):
+    # Sinh 2500 dòng biến rác đa dạng thể loại bao bọc ngoài rìa
+    junk_pieces = []
+    for _ in range(2500):
         v_junk = random_var()
-        # Tạo chỉ số môi trường (index trong mảng d_env_vars)
-        env_idx = i + 1 
+        rand_target = random.randint(50, 99999)
+        junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
+    half = len(junk_pieces) // 2
+    junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
+    
+    # Đóng gói toàn bộ các Key thực và Hằng số cuộn vào cấu trúc Table ẩn danh
+    matrix_elements = []
+    for k_idx, k_val in enumerate(keys_list):
+        obf_val = obfuscate_core_math(k_val)
+        obf_offset = obfuscate_core_math(k_idx + 3)
+        matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
         
-        if sec_idx < len(secret_variables) and i == secret_positions[sec_idx]:
-            # ĐÂY LÀ KEY THẬT: Ngụy trang cấu trúc hoàn toàn đồng bộ với rác
-            sec_data = secret_variables[sec_idx]
-            junk_lines.append(f"local {v_junk}=register_env({env_idx},{sec_data['val']})")
-            pointer_map_elements.append(f"{env_idx:04X}")
-            sec_idx += 1
-        else:
-            # ĐÂY LÀ RÁC THUẦN TÚY: Sử dụng chung hàm toán học để AI hoặc người không thể phân biệt
-            rand_target = random.randint(50, 99999)
-            junk_lines.append(f"local {v_junk}=register_env({env_idx},{obfuscate_core_math(rand_target)})")
-            
-    flat_pointer_map = "-".join(pointer_map_elements)
-    final_stealth_junk = ";".join(junk_lines)
+    # Đảo ngược mảng phần tử để vòng lặp giải mã duyệt từ 1 đến #mảng một cách tự nhiên (giải mã ngược thứ tự lúc mã hóa)
+    matrix_elements.reverse() 
+    
+    # ĐÃ FIX: Sửa dấu đóng mở ngoặc chính xác tránh lỗi cú pháp trong Lua sinh ra
+    lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # Lõi trình thông dịch VM v15.0 - Trích xuất ma trận Key động từ mảng d_env_vars
+    # Lõi trình thông dịch VM v12.1 sử dụng vòng lặp kín chống đếm dòng
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -149,52 +170,30 @@ def ironbrew_total_wrapped_v15_0(source_code):
         f"for {v_loop_idx}={obfuscate_core_math(1)},{obfuscate_core_math(2)} do "
         f"if {v_loop_idx}=={obfuscate_core_math(1)} then "
         f"local h_clean=string.sub({v_bytecode},5); "
-        
-        # KHỞI TẠO MA TRẬN ĐỘNG: Đọc bản đồ pointer_map để tự đi nhặt Key trong đống rác lên RAM
-        f"local {v_matrix} = {{}}; "
-        f"local {v_map_str} = \"{flat_pointer_map}\"; "
-        f"local {v_is_k} = true; "
-        f"local {v_temp_k}, {v_temp_o}; "
-        f"for {v_chunk} in string.gmatch({v_map_str}, \"[^-]+\") do "
-        f"local {v_pos} = tonumber({v_chunk}, 16); "
-        f"local {v_item} = d_env_vars[{v_pos}]; "
-        f"if {v_is_k} then {v_temp_k} = {v_item}; {v_is_k} = false; else "
-        f"{v_temp_o} = {v_item}; "
-        f"{v_matrix}[(# {v_matrix}) + 1] = {{{v_temp_k}, {v_temp_o}}}; {v_is_k} = true; "
-        f"end; "
-        f"end; "
-        
+        f"{lua_matrix_init} " # Nạp ma trận khóa đã sửa cú pháp chuẩn
         f"local {v_byte_idx}=0; "
         f"for {v_idx}=1,#h_clean,2 do "
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_num}; "
+        
+        # VÒNG LẶP GIẢI MÃ KÍN: Chỉ có ĐÚNG 1 dòng gọi hàm giải mã XOR trơ trọi!
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
         f"end; "
+        
         f"{v_buffer}={v_buffer}..string.char({v_dec}); "
+        
+        # VÒNG LẶP CUỘN KHÓA KÍN: Tự động cuộn toàn bộ mảng khóa đồng bộ
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
         f"end; "
+        
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
         f"elseif {v_loop_idx}=={obfuscate_core_math(2)} then "
         f"local {v_str1}, {v_str2} = \"\", \"\"; "
-        
-        # Tái cấu trúc lại ma trận Key gốc để giải mã chính xác hàm loadstring/load hệ thống
-        f"local {v_matrix} = {{}}; "
-        f"local {v_map_str} = \"{flat_pointer_map}\"; "
-        f"local {v_is_k} = true; "
-        f"local {v_temp_k}, {v_temp_o}; "
-        f"for {v_chunk} in string.gmatch({v_map_str}, \"[^-]+\") do "
-        f"local {v_pos} = tonumber({v_chunk}, 16); "
-        f"local {v_item} = d_env_vars[{v_pos}]; "
-        f"if {v_is_k} then {v_temp_k} = {v_item}; {v_is_k} = false; else "
-        f"{v_temp_o} = {v_item}; "
-        f"{v_matrix}[(# {v_matrix}) + 1] = {{{v_temp_k}, {v_temp_o}}}; {v_is_k} = true; "
-        f"end; "
-        f"end; "
-        
+        f"{lua_matrix_init} " # Khởi tạo lại cấu trúc mảng để lấy lại giá trị Key gốc chính xác giải mã loadstring
         f"local {v_k_step}={v_bit_func}({v_matrix}[#{v_matrix}][1],{v_matrix}[1][1]); "
         f"for {v_t_idx}=1,{obfuscate_core_math(len_ls)},2 do "
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
@@ -212,19 +211,10 @@ def ironbrew_total_wrapped_v15_0(source_code):
         f"end"
     )
     
-    # Thiết lập mảng lưu trữ RAM ảo động toàn cục của script
-    wrapped_payload = (
-        f"local d_env_vars = {{}}; "
-        f"local function register_env(idx, val) d_env_vars[idx] = val; return val; end; "
-    )
-    
-    total_payload = f"{wrapped_payload}{final_stealth_junk};{bit_and_interpreter_core}"
+    total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) {clean_payload} end)(...)"
 
-# ----------------------------------------------------------------
-# ĐỊNH NGHĨA LỆNH CHẠY BOT DISCORD
-# ----------------------------------------------------------------
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
     source_code = None
@@ -233,12 +223,12 @@ async def obf_command(ctx, *, text_code: str = None):
     elif text_code:
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
-        return await ctx.reply("Vui lòng cung cấp mã nguồn hợp lệ hoặc đính kèm file.")
-    status_msg = await ctx.reply("Securing with Ghost Matrix Engine v15.0...")
+        return await ctx.reply("Please provide a valid file or code.")
+    status_msg = await ctx.reply("Securing with Loop Matrix Engine v12.1...")
     try:
-        final_script = ironbrew_total_wrapped_v15_0(source_code)
+        final_script = ironbrew_total_wrapped_v12_1(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done. Script ghost matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done. Script matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
     except Exception as e:
         await status_msg.delete()
@@ -247,4 +237,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-
+    
