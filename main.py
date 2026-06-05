@@ -148,7 +148,7 @@ def ironbrew_total_wrapped_v15_0(source_code):
         secret_variables.append({"var": var_k, "val": obfuscate_core_math(k_val), "is_key": True})
         secret_variables.append({"var": var_o, "val": obfuscate_core_math(k_idx + 3), "is_key": False})
         
-    # Tạo danh sách Pointer chỉ định vị trí ngẫu nhiên để trộn Key vào bãi rác
+    # Tạo danh sách Pointer chỉ định vị trí ngẫu nhiên để trộn Key vào bãi rác (từ dòng 100 đến 2400)
     secret_positions = sorted(random.sample(range(100, total_junk_count - 100), len(secret_variables)))
     pointer_map_elements = []
     
@@ -163,7 +163,7 @@ def ironbrew_total_wrapped_v15_0(source_code):
         else:
             v_junk = random_var()
             rand_target = random.randint(50, 99999)
-            # KỸ THUẬT PHÒNG THỦ AI: Trộn 30% rác toán học thuần túy đánh lừa thuật toán AI
+            # KỸ THUẬT PHÒNG THỦ AI: Trộn 30% rác toán học thuần túy trông giống hệt dòng chứa Key thật
             if random.random() < 0.3:
                 junk_lines.append(f"local {v_junk}={obfuscate_core_math(rand_target)}")
             else:
@@ -171,7 +171,7 @@ def ironbrew_total_wrapped_v15_0(source_code):
             
     flat_pointer_map = "-".join(pointer_map_elements)
 
-    # Khởi tạo chuỗi thông dịch lõi ảo VM (Đã fix hoàn toàn lỗi cú pháp f-string biến Python)
+    # Khởi tạo chuỗi thông dịch lõi ảo VM
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -279,11 +279,11 @@ async def obf_command(ctx, *, text_code: str = None):
     if not source_code or not source_code.strip():
         return await ctx.reply("Vui lòng cung cấp mã nguồn hợp lệ hoặc đính kèm file.")
         
-    status_msg = await ctx.reply("Đang khóa mã hóa bằng hệ thống Ghost Matrix Engine v15.0...")
+    status_msg = await ctx.reply("Đang bảo mật mã nguồn bằng Ultimate Ghost Engine v15.0...")
     try:
         final_script = ironbrew_total_wrapped_v15_0(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done! Code đã được mã hóa ngụy trang tàng hình hoàn tất.", file=discord.File(file_stream, filename="message.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done! Mã nguồn đã được bảo mật ngụy trang tàng hình hoàn tất.", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
     except Exception as e:
         await status_msg.delete()
@@ -296,6 +296,6 @@ if __name__ == "__main__":
     # Khởi động Web Server nền phụ trợ giữ kết nối bot
     threading.Thread(target=run_server, daemon=True).start()
     
-    # Nạp Token từ biến môi trường hệ thống để khởi chạy bot bảo mật
+    # Nạp Token từ biến môi trường hệ thống để khởi chạy bot
     bot.run(os.getenv("TOKEN"))
 
