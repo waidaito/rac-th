@@ -78,51 +78,44 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def robust_lua_compiler(source_code):
+def advance_bytecode_compiler(source_code):
     """
-    Bộ biên dịch nâng cao: Tự động phân tích cấu trúc mã nguồn một cách thông minh.
-    Nếu phát hiện mã nguồn phức tạp, nó sẽ tự động băm nhỏ cấu trúc khối 
-    để nạp tuần tự vào bộ nhớ đệm lệnh của máy ảo mà không làm crash bộ thông dịch.
+    Trình dịch Opcode nâng cao: Phân tách cấu trúc mã nguồn thông minh,
+    loại bỏ comment và trích xuất thành luồng dữ liệu nhị phân Bytecode tuần tự.
     """
     opcodes = []
-    # Loại bỏ các đoạn comment để tối ưu hóa dữ liệu nhị phân
     clean_code = re.sub(r'--\[\[.*?\]\]', '', source_code, flags=re.DOTALL)
     clean_code = re.sub(r'--.*', '', clean_code)
     
-    # Chia nhỏ mã nguồn theo các khối logic an toàn (Statements)
     statements = [s.strip() for s in re.split(r'[;\n]+', clean_code) if s.strip()]
     
     for stmt in statements:
-        # Nhận diện lệnh gọi hàm đơn giản: func("string") hoặc func(number)
         match_call = re.match(r'^([a-zA-Z_][a-zA-Z0-9_\.]*)\s*\(\s*(.*)\s*\)$', stmt)
         if match_call:
             func_name = match_call.group(1)
             arg_raw = match_call.group(2).strip()
             
-            # Đẩy chỉ thị lấy môi trường toàn cục/hàm hệ thống
+            # OP 10: Nạp định danh hàm/biến môi trường
             opcodes.append({"op": 10, "data": func_name})
             
-            # Xử lý tham số truyền vào hàm
+            # OP 20 / 25: Nạp tham số tương ứng vào Stack Máy ảo
             if (arg_raw.startswith('"') and arg_raw.endswith('"')) or (arg_raw.startswith("'") and arg_raw.endswith("'")):
-                str_val = arg_raw[1:-1]
-                opcodes.append({"op": 20, "data": str_val})
+                opcodes.append({"op": 20, "data": arg_raw[1:-1]})
             elif arg_raw.isdigit():
                 opcodes.append({"op": 25, "data": int(arg_raw)})
             else:
-                # Nếu tham số là một cụm phức tạp, coi như một biểu thức inline
                 opcodes.append({"op": 20, "data": arg_raw})
                 
-            # Chỉ thị thực thi hàm với 1 tham số
+            # OP 30: Phát lệnh thực thi hàm trong Stack với 1 tham số
             opcodes.append({"op": 30, "data": 1})
         else:
-            # Đối với các khối lệnh gán biến, vòng lặp phức tạp, compiler lỏ sẽ đóng gói block độc lập
-            # Đoạn này máy ảo sẽ dùng hàm thực thi cục bộ ẩn danh thay vì loadstring hệ thống toàn cục
+            # OP 88: Khối lệnh phức tạp (Sử dụng Proxy Sandbox để xử lý thay vì ném ra toàn cục)
             opcodes.append({"op": 88, "data": stmt})
             
     return opcodes
 
-def ironbrew_pure_vm_v16_0(source_code):
-    # 1. Tạo 5000 dòng rác bảo vệ file tĩnh
+def ironbrew_pure_vm_v16_no_load(source_code):
+    # 1. Sinh 5000 dòng mã rác toán học bảo vệ rìa tĩnh ngoài file
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -131,14 +124,14 @@ def ironbrew_pure_vm_v16_0(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
 
-    # 2. Biên dịch code sang Bytecode Opcode hoàn chỉnh
-    compiled_opcodes = robust_lua_compiler(source_code)
+    # 2. Biên dịch source sang cấu trúc chỉ thị tập lệnh độc lập
+    compiled_opcodes = advance_bytecode_compiler(source_code)
     
-    # 3. Khởi tạo 7-12 tầng khóa XOR xoay vòng
+    # 3. Tạo 7-12 tầng khóa XOR cuộn tịnh tiến của kiến trúc v12.1
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Đóng gói dữ liệu nhị phân dòng chảy cố định (Safe Pointer Stream)
+    # Đóng gói dữ liệu nhị phân dạng dòng chảy cố định (Safe Pointer Stream)
     raw_bytes_stream = bytearray()
     for inst in compiled_opcodes:
         op_str = str(inst['op']).encode('utf-8')
@@ -148,13 +141,13 @@ def ironbrew_pure_vm_v16_0(source_code):
         raw_bytes_stream.append(len(op_str))
         raw_bytes_stream.extend(op_str)
         
-        # [Độ dài DATA (2 Bytes)] + [Dữ liệu]
+        # [Độ dài DATA (2 Bytes)] + [Nội dung dữ liệu]
         len_data = len(data_bytes)
         raw_bytes_stream.append((len_data >> 8) & 0xFF)
         raw_bytes_stream.append(len_data & 0xFF)
         raw_bytes_stream.extend(data_bytes)
 
-    # Tiến hành băm XOR đa tầng cuộn tịnh tiến
+    # Thực hiện băm XOR đa tầng tuần tiến hóa
     encrypted_hex_list = []
     current_keys = list(keys_list)
     for idx, byte in enumerate(raw_bytes_stream):
@@ -165,22 +158,23 @@ def ironbrew_pure_vm_v16_0(source_code):
         for k_idx in range(len(current_keys)):
             current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
 
-    hex_bytecode_stream = "".join(encrypted_hex_list)
-    bytecode_string_block = f"[=[XORVM_PURE:{hex_bytecode_stream}]=]"
+    hex_payload = "".join(encrypted_hex_list)
+    fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
+    bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
 
-    # Tạo biểu thức toán học rác giấu Key gốc
+    # Sinh ma trận toán học che giấu các khóa gốc ngẫu nhiên
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
     matrix_elements.reverse()
 
-    # Tên biến ngẫu nhiên bảo mật cao
+    # Khởi tạo định danh biến ngẫu nhiên bảo vệ RAM
     v_bit_func, v_i, v_j, v_x, v_m, v_w, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_matrix, v_byte_idx, v_idx, v_pair, v_num, v_dec, v_loop_k = [random_var() for _ in range(8)]
     v_buffer, v_pc, v_instructions, v_stack, v_env, v_instr, v_op, v_data = [random_var() for _ in range(8)]
-    v_ptr, v_op_len, v_dat_len, v_p_op, v_p_data, v_hi, v_lo, v_target_func = [random_var() for _ in range(8)]
+    v_ptr, v_op_len, v_dat_len, v_p_op, v_p_data, v_hi, v_lo, v_segment, v_obj = [random_var() for _ in range(9)]
 
-    # 4. Trình thông dịch Máy ảo Thuần Túy - TUYỆT ĐỐI KHÔNG XÀI LOAD/LOADSTRING
+    # 4. LÕI MÁY ẢO THÔNG DỊCH THUẦN TÚY - KHÔNG SỬ DỤNG LOADSTRING ĐỂ CHẠY LUỒNG CHÍNH
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; for {v_m}=0,7 do "
@@ -189,7 +183,7 @@ def ironbrew_pure_vm_v16_0(source_code):
         f"end return {v_x} "
         f"end; "
         f"local {v_bytecode} = {bytecode_string_block}; "
-        f"local h_clean = string.sub({v_bytecode}, 12); "
+        f"local h_clean = string.sub({v_bytecode}, 5); "
         f"local {v_matrix} = {{{','.join(matrix_elements)}}}; "
         f"local {v_byte_idx} = 0; "
         f"local {v_buffer} = {{}}; "
@@ -221,23 +215,23 @@ def ironbrew_pure_vm_v16_0(source_code):
         f"{v_ptr} = {v_ptr} + {v_dat_len}; "
         f"{v_instructions}[#{v_instructions}+1] = {{tonumber({v_p_op}), {v_p_data}}}; "
         f"end; "
-        # LÕI ĐIỀU PHỐI ĐỘC LẬP (DISPATCHER) - CHẠY ẨN KHÔNG CÓ CHỮ TRONG RAM
         f"local {v_pc} = 1; local {v_stack} = {{}}; "
         f"local {v_env} = (getgenv and getgenv()) or _G or _ENV or getfenv(); "
         f"while {v_pc} <= #{v_instructions} do "
         f"local {v_instr} = {v_instructions}[{v_pc}]; "
         f"local {v_op} = {v_instr}[1]; local {v_data} = {v_instr}[2]; "
         f"if {v_op} == 10 then "
-        f"local paths = {}; for p in string.gmatch({v_data}, \"[^\\.]+\") do table.insert(paths, p) end; "
-        f"local obj = {v_env}; for _, p in ipairs(paths) do if obj then obj = obj[p] end end; "
-        f"{v_stack}[#{v_stack}+1] = obj; "
+        f"local {v_obj} = {v_env}; "
+        f"for {v_segment} in string.gmatch({v_data}, \"[^\\.]+\") do "
+        f"if {v_obj} then {v_obj} = {v_obj}[{v_segment}] end "
+        f"end; "
+        f"{v_stack}[#{v_stack}+1] = {v_obj}; "
         f"elseif {v_op} == 20 then {v_stack}[#{v_stack}+1] = {v_data}; "
         f"elseif {v_op} == 25 then {v_stack}[#{v_stack}+1] = tonumber({v_data}); "
         f"elseif {v_op} == 30 then "
         f"local arg = {v_stack}[#{v_stack}]; local func = {v_stack}[#{v_stack}-1]; "
         f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}-1] = nil; "
         f"if type(func) == \"function\" then func(arg) end; "
-        # Thay thế OP 99 (loadstring) bằng OP 88 (Thực thi chuỗi môi trường cục bộ thông qua Proxy Handler bảo mật)
         f"elseif {v_op} == 88 then "
         f"local handler = {v_env}[\"pcall\"] or pcall; "
         f"handler(function() "
@@ -253,7 +247,7 @@ def ironbrew_pure_vm_v16_0(source_code):
 
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    return f"-- Protected by 8xms PURE XOR-VM Architecture v16.0 --\nreturn(function(...) {clean_payload} end)(...)"
+    return f"-- Protected by PURE MULTI-LAYER XOR-VM Architecture --\nreturn(function(...) {clean_payload} end)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -264,9 +258,9 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Compiling into Pure Virtual Machine instructions... (No Load)")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Transpiling into No-Load VM blocks... ")
     try:
-        final_script = ironbrew_pure_vm_v16_0(source_code)
+        final_script = ironbrew_pure_vm_v16_no_load(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
@@ -280,4 +274,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-    
+        
