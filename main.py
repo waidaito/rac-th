@@ -177,8 +177,8 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[\"{hex_loadstring_gate}\"]"
     )
     
-    # ĐÃ ĐỔI DÒNG KẾT THÚC: Bọc thêm hàm rỗng để ép chữ 'end' đứng biệt lập ở dòng cuối cùng file .txt
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.3 Premium --\nlocal {random_var()} = (function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args});\nreturn function(...)\nend"
+    # KẾT THÚC BẰNG CHỮ 'end' ĐI LIỀN VỚI TUPLE ARGUMENTS ĐẸP MẮT
+    return f"-- Protected by Fixed Layer-XOR Architecture v12.3 Fixed Engine --\nreturn (function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args})"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -189,7 +189,7 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.2 WeAreDevs Engine...")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.3 Fixed Engine...")
     try:
         final_script = ironbrew_wearedevs_pure_fixed(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
@@ -203,4 +203,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-    
+        
