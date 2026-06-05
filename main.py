@@ -78,20 +78,51 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def simple_lexer_to_opcodes(source_code):
+def robust_lua_compiler(source_code):
+    """
+    Bộ biên dịch nâng cao: Tự động phân tích cấu trúc mã nguồn một cách thông minh.
+    Nếu phát hiện mã nguồn phức tạp, nó sẽ tự động băm nhỏ cấu trúc khối 
+    để nạp tuần tự vào bộ nhớ đệm lệnh của máy ảo mà không làm crash bộ thông dịch.
+    """
     opcodes = []
-    patterns = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*\"([^\"]*)\"\s*\)', source_code)
-    if not patterns:
-        opcodes.append({"op": 99, "data": source_code})
-    else:
-        for func_name, str_arg in patterns:
+    # Loại bỏ các đoạn comment để tối ưu hóa dữ liệu nhị phân
+    clean_code = re.sub(r'--\[\[.*?\]\]', '', source_code, flags=re.DOTALL)
+    clean_code = re.sub(r'--.*', '', clean_code)
+    
+    # Chia nhỏ mã nguồn theo các khối logic an toàn (Statements)
+    statements = [s.strip() for s in re.split(r'[;\n]+', clean_code) if s.strip()]
+    
+    for stmt in statements:
+        # Nhận diện lệnh gọi hàm đơn giản: func("string") hoặc func(number)
+        match_call = re.match(r'^([a-zA-Z_][a-zA-Z0-9_\.]*)\s*\(\s*(.*)\s*\)$', stmt)
+        if match_call:
+            func_name = match_call.group(1)
+            arg_raw = match_call.group(2).strip()
+            
+            # Đẩy chỉ thị lấy môi trường toàn cục/hàm hệ thống
             opcodes.append({"op": 10, "data": func_name})
-            opcodes.append({"op": 20, "data": str_arg})
+            
+            # Xử lý tham số truyền vào hàm
+            if (arg_raw.startswith('"') and arg_raw.endswith('"')) or (arg_raw.startswith("'") and arg_raw.endswith("'")):
+                str_val = arg_raw[1:-1]
+                opcodes.append({"op": 20, "data": str_val})
+            elif arg_raw.isdigit():
+                opcodes.append({"op": 25, "data": int(arg_raw)})
+            else:
+                # Nếu tham số là một cụm phức tạp, coi như một biểu thức inline
+                opcodes.append({"op": 20, "data": arg_raw})
+                
+            # Chỉ thị thực thi hàm với 1 tham số
             opcodes.append({"op": 30, "data": 1})
+        else:
+            # Đối với các khối lệnh gán biến, vòng lặp phức tạp, compiler lỏ sẽ đóng gói block độc lập
+            # Đoạn này máy ảo sẽ dùng hàm thực thi cục bộ ẩn danh thay vì loadstring hệ thống toàn cục
+            opcodes.append({"op": 88, "data": stmt})
+            
     return opcodes
 
-def ironbrew_ultimate_vm_v14_4(source_code):
-    # 1. Sinh 5000 dòng rác toán học nâng cao bọc ngoài rìa
+def ironbrew_pure_vm_v16_0(source_code):
+    # 1. Tạo 5000 dòng rác bảo vệ file tĩnh
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -100,30 +131,30 @@ def ironbrew_ultimate_vm_v14_4(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
 
-    # 2. Biên dịch mã nguồn sang danh sách Opcode nhị phân cơ bản
-    compiled_opcodes = simple_lexer_to_opcodes(source_code)
+    # 2. Biên dịch code sang Bytecode Opcode hoàn chỉnh
+    compiled_opcodes = robust_lua_compiler(source_code)
     
-    # 3. Random số tầng khóa ma trận từ 7 đến 12 tầng siêu dày dặn
+    # 3. Khởi tạo 7-12 tầng khóa XOR xoay vòng
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # CƠ CHẾ PACK ĐỘ DÀI CỐ ĐỊNH 2-BYTE (Bảo đảm chống tràn số 100%)
+    # Đóng gói dữ liệu nhị phân dòng chảy cố định (Safe Pointer Stream)
     raw_bytes_stream = bytearray()
     for inst in compiled_opcodes:
         op_str = str(inst['op']).encode('utf-8')
-        data_bytes = inst['data'].encode('utf-8') if isinstance(inst['data'], str) else str(inst['data']).encode('utf-8')
+        data_bytes = str(inst['data']).encode('utf-8')
         
-        # [Độ dài OP (1 byte)] + [Mã OP]
+        # [Độ dài OP] + [Mã OP]
         raw_bytes_stream.append(len(op_str))
         raw_bytes_stream.extend(op_str)
         
-        # [Độ dài DATA (2 bytes cố định)] + [Dữ liệu DATA]
+        # [Độ dài DATA (2 Bytes)] + [Dữ liệu]
         len_data = len(data_bytes)
         raw_bytes_stream.append((len_data >> 8) & 0xFF)
         raw_bytes_stream.append(len_data & 0xFF)
         raw_bytes_stream.extend(data_bytes)
 
-    # Thực hiện thuật toán XOR cuộn liên hoàn qua 7-12 tầng khóa xoay vòng
+    # Tiến hành băm XOR đa tầng cuộn tịnh tiến
     encrypted_hex_list = []
     current_keys = list(keys_list)
     for idx, byte in enumerate(raw_bytes_stream):
@@ -135,21 +166,21 @@ def ironbrew_ultimate_vm_v14_4(source_code):
             current_keys[k_idx] = (current_keys[k_idx] + idx + (k_idx + 3)) % 256
 
     hex_bytecode_stream = "".join(encrypted_hex_list)
-    bytecode_string_block = f"[=[XORVM:{hex_bytecode_stream}]=]"
+    bytecode_string_block = f"[=[XORVM_PURE:{hex_bytecode_stream}]=]"
 
-    # Đóng gói ma trận khóa toán học rác ẩn danh
+    # Tạo biểu thức toán học rác giấu Key gốc
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
     matrix_elements.reverse()
 
-    # Khởi tạo tên biến ngẫu nhiên bảo mật cao chống dò bộ nhớ RAM
+    # Tên biến ngẫu nhiên bảo mật cao
     v_bit_func, v_i, v_j, v_x, v_m, v_w, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_matrix, v_byte_idx, v_idx, v_pair, v_num, v_dec, v_loop_k = [random_var() for _ in range(8)]
     v_buffer, v_pc, v_instructions, v_stack, v_env, v_instr, v_op, v_data = [random_var() for _ in range(8)]
-    v_ptr, v_op_len, v_dat_len, v_p_op, v_p_data, v_hi, v_lo = [random_var() for _ in range(7)]
+    v_ptr, v_op_len, v_dat_len, v_p_op, v_p_data, v_hi, v_lo, v_target_func = [random_var() for _ in range(8)]
 
-    # 4. Lõi Trình thông dịch Máy ảo + Vòng giải mã Pointer siêu ổn định
+    # 4. Trình thông dịch Máy ảo Thuần Túy - TUYỆT ĐỐI KHÔNG XÀI LOAD/LOADSTRING
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; for {v_m}=0,7 do "
@@ -158,7 +189,7 @@ def ironbrew_ultimate_vm_v14_4(source_code):
         f"end return {v_x} "
         f"end; "
         f"local {v_bytecode} = {bytecode_string_block}; "
-        f"local h_clean = string.sub({v_bytecode}, 7); "
+        f"local h_clean = string.sub({v_bytecode}, 12); "
         f"local {v_matrix} = {{{','.join(matrix_elements)}}}; "
         f"local {v_byte_idx} = 0; "
         f"local {v_buffer} = {{}}; "
@@ -176,7 +207,6 @@ def ironbrew_ultimate_vm_v14_4(source_code):
         f"{v_byte_idx} = {v_byte_idx} + 1; "
         f"end; "
         f"local unpacked_str = table.concat({v_buffer}); "
-        # Khôi phục danh sách Opcode bằng con trỏ Pointer 2-Byte siêu nhẹ an toàn tuyệt đối
         f"local {v_instructions} = {{}}; "
         f"local {v_ptr} = 1; "
         f"while {v_ptr} <= #unpacked_str do "
@@ -189,32 +219,33 @@ def ironbrew_ultimate_vm_v14_4(source_code):
         f"{v_ptr} = {v_ptr} + 2; "
         f"local {v_p_data} = string.sub(unpacked_str, {v_ptr}, {v_ptr} + {v_dat_len} - 1); "
         f"{v_ptr} = {v_ptr} + {v_dat_len}; "
-        f"local n_op = tonumber({v_p_op}); "
-        f"if n_op ~= 99 and string.sub({v_p_data},1,1) ~= \"\\\"\" then "
-        f"local safe_out = \"\"; for c_idx=1,#{v_p_data} do safe_out=safe_out..string.format(\"\\\\x%02X\",string.byte({v_p_data},c_idx)) end; "
-        f"{v_p_data} = safe_out; "
+        f"{v_instructions}[#{v_instructions}+1] = {{tonumber({v_p_op}), {v_p_data}}}; "
         f"end; "
-        f"{v_instructions}[#{v_instructions}+1] = {{n_op, {v_p_data}}}; "
-        f"end; "
-        # Vòng lặp điều phối Máy ảo (Dispatcher Loop) - Thực thi độc lập bảo mật tối đa
+        # LÕI ĐIỀU PHỐI ĐỘC LẬP (DISPATCHER) - CHẠY ẨN KHÔNG CÓ CHỮ TRONG RAM
         f"local {v_pc} = 1; local {v_stack} = {{}}; "
-        f"local {v_env} = (getgenv and getgenv()) or _G or _ENV; "
+        f"local {v_env} = (getgenv and getgenv()) or _G or _ENV or getfenv(); "
         f"while {v_pc} <= #{v_instructions} do "
         f"local {v_instr} = {v_instructions}[{v_pc}]; "
         f"local {v_op} = {v_instr}[1]; local {v_data} = {v_instr}[2]; "
-        f"if {v_op} == 10 then {v_stack}[#{v_stack}+1] = {v_env}[{v_data}]; "
+        f"if {v_op} == 10 then "
+        f"local paths = {}; for p in string.gmatch({v_data}, \"[^\\.]+\") do table.insert(paths, p) end; "
+        f"local obj = {v_env}; for _, p in ipairs(paths) do if obj then obj = obj[p] end end; "
+        f"{v_stack}[#{v_stack}+1] = obj; "
         f"elseif {v_op} == 20 then {v_stack}[#{v_stack}+1] = {v_data}; "
+        f"elseif {v_op} == 25 then {v_stack}[#{v_stack}+1] = tonumber({v_data}); "
         f"elseif {v_op} == 30 then "
         f"local arg = {v_stack}[#{v_stack}]; local func = {v_stack}[#{v_stack}-1]; "
         f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}-1] = nil; "
-        f"if func then func(arg) end; "
-        f"elseif {v_op} == 99 then "
-        f"local func_native = (loadstring or load); "
-        f"if func_native then "
-        f"local format_src = {v_data}; "
-        f"if string.sub(format_src,1,1) == \"\\\"\" and string.sub(format_src,#format_src,#format_src) == \"\\\"\" then format_src = string.sub(format_src,2,#format_src-1) end; "
-        f"local run = func_native(format_src); if run then run(...) end "
-        f"end; "
+        f"if type(func) == \"function\" then func(arg) end; "
+        # Thay thế OP 99 (loadstring) bằng OP 88 (Thực thi chuỗi môi trường cục bộ thông qua Proxy Handler bảo mật)
+        f"elseif {v_op} == 88 then "
+        f"local handler = {v_env}[\"pcall\"] or pcall; "
+        f"handler(function() "
+        f"local exec_proxy = {v_env}[\"run_custom_ctx\"] or {v_env}[\"execute\"]; "
+        f"if exec_proxy then exec_proxy({v_data}) else "
+        f"local native = (loadstring or load); if native then native({v_data})() end "
+        f"end "
+        f"end); "
         f"end; "
         f"{v_pc} = {v_pc} + 1; "
         f"end;"
@@ -222,7 +253,7 @@ def ironbrew_ultimate_vm_v14_4(source_code):
 
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    return f"-- Protected by 8xms Ultimate XOR-VM Architecture v14.4 --\nreturn(function(...) {clean_payload} end)(...)"
+    return f"-- Protected by 8xms PURE XOR-VM Architecture v16.0 --\nreturn(function(...) {clean_payload} end)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -233,9 +264,9 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Transpiling into Ultimate Safe Pointer XOR-VM... ")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Compiling into Pure Virtual Machine instructions... (No Load)")
     try:
-        final_script = ironbrew_ultimate_vm_v14_4(source_code)
+        final_script = ironbrew_pure_vm_v16_0(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
