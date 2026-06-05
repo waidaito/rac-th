@@ -132,7 +132,7 @@ def ironbrew_total_wrapped_v12_1(source_code):
 
     # Sinh 2500 dòng biến rác đa dạng thể loại bao bọc ngoài rìa
     junk_pieces = []
-    for _ in range(2500):
+    for _ in range(5000):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
@@ -223,12 +223,12 @@ async def obf_command(ctx, *, text_code: str = None):
     elif text_code:
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
-        return await ctx.reply("Please provide a valid file or code.")
-    status_msg = await ctx.reply("Securing with Loop Matrix Engine v12.1...")
+        return await ctx.reply("Please add file / code.")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing ")
     try:
         final_script = ironbrew_total_wrapped_v12_1(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done. Script matrix obfuscated safely.", file=discord.File(file_stream, filename="message.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
     except Exception as e:
         await status_msg.delete()
