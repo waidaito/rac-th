@@ -79,7 +79,7 @@ def generate_clean_advanced_junk(target):
         return obfuscate_core_math(target)
 
 def ironbrew_total_wrapped_v12_1(source_code):
-    keys_count = random.randint(5, 8) # Đảm bảo số tầng khóa cân bằng, bảo mật cao và mượt luồng
+    keys_count = random.randint(6, 10)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
     encrypted_hex_list = []
@@ -100,19 +100,21 @@ def ironbrew_total_wrapped_v12_1(source_code):
     key_anchor = keys_list[0]
     hex_loadstring = "".join([f"{ord(c) ^ key_anchor:02X}" for c in "loadstring"])
     hex_load = "".join([f"{ord(c) ^ key_anchor:02X}" for c in "load"])
+    hex_getfenv = "".join([f"{ord(c) ^ key_anchor:02X}" for c in "getfenv"])
+    hex_tostring = "".join([f"{ord(c) ^ key_anchor:02X}" for c in "tostring"])
     
-    # Tạo định danh ngẫu nhiên cho các biến VM
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_func, v_run = [random_var() for _ in range(4)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_idx, v_env = random_var(), random_var()
-    v_str1, v_str2, v_t_idx, v_t_pair = [random_var() for _ in range(4)]
-    v_h_ls, v_h_l = random_var(), random_var()
+    v_str1, v_str2, v_str3, v_str4, v_t_idx, v_t_pair = [random_var() for _ in range(6)]
+    v_h_ls, v_h_l, v_h_gf, v_h_ts = random_var(), random_var(), random_var(), random_var()
     v_byte_idx = random_var()
     v_matrix, v_loop_k = random_var(), random_var()
+    v_chk_str, v_safety = random_var(), random_var()
 
     junk_pieces = []
-    for _ in range(3000): # Giữ mức 3000 dòng để tối ưu hóa dung lượng file trên Discord
+    for _ in range(2500): 
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
@@ -126,7 +128,7 @@ def ironbrew_total_wrapped_v12_1(source_code):
         matrix_elements.append(f"{{{obf_val},{obf_offset}}}")
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # LÕI TRÌNH THÔNG DỊCH VIRTUAL MACHINE ỔN ĐỊNH TUYỆT ĐỐI
+    # LÕI VM ĐÃ TÍCH HỢP ANTI-HOOK VÀ CHECK TOÀN VẸN HÀM
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -140,6 +142,8 @@ def ironbrew_total_wrapped_v12_1(source_code):
         f"local {v_bytecode}={bytecode_string_block}; "
         f"local {v_h_ls}=\"{hex_loadstring}\"; "
         f"local {v_h_l}=\"{hex_load}\"; "
+        f"local {v_h_gf}=\"{hex_getfenv}\"; "
+        f"local {v_h_ts}=\"{hex_tostring}\"; "
         f"local {v_buffer}={{}}; " 
         f"for {v_loop_idx}=1,2 do "
         f"if {v_loop_idx}==1 then "
@@ -150,35 +154,55 @@ def ironbrew_total_wrapped_v12_1(source_code):
         f"local {v_pair}=string.sub(h_clean,{v_idx},{v_idx}+1); "
         f"local {v_num}=tonumber({v_pair},16); "
         f"local {v_dec}={v_num}; "
-        
-        # GIẢI MÃ LIÊN HOÀN NGƯỢC TẦNG (Bóc tách chính xác từ ngoài vào trong)
         f"for {v_loop_k}=#{v_matrix},1,-1 do "
         f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
         f"end; "
-        
         f"{v_buffer}[#{v_buffer}+1]=string.char({v_dec}); "
-        
-        # CUỘN KHÓA ĐỒNG BỘ XUÔI DÒNG (Khớp hoàn toàn công thức dịch khóa của Python)
         f"for {v_loop_k}=1,#{v_matrix} do "
         f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
         f"end; "
-        
         f"{v_byte_idx}={v_byte_idx}+1; "
         f"end "
         f"elif {v_loop_idx}==2 then "
-        f"local {v_str1}, {v_str2} = \"\", \"\"; "
+        f"local {v_str1}, {v_str2}, {v_str3}, {v_str4} = \"\", \"\", \"\", \"\"; "
         f"{lua_matrix_init} "
         f"local anchor_key = {v_matrix}[1][1]; " 
-        f"for {v_t_idx}=1,#{v_h_ls},2 do " # Đã fix lỗi cú pháp #+ thành #
+        f"for {v_t_idx}=1,#{v_h_ls},2 do " 
         f"local {v_t_pair}=string.sub({v_h_ls},{v_t_idx},{v_t_idx}+1); "
         f"if #{v_t_pair}==2 then {v_str1}={v_str1}..string.char({v_bit_func}(tonumber({v_t_pair},16),anchor_key)) end "
         f"end; "
-        f"for {v_t_idx}=1,#{v_h_l},2 do " # Đã fix lỗi cú pháp #+ thành #
+        f"for {v_t_idx}=1,#{v_h_l},2 do " 
         f"local {v_t_pair}=string.sub({v_h_l},{v_t_idx},{v_t_idx}+1); "
         f"if #{v_t_pair}==2 then {v_str2}={v_str2}..string.char({v_bit_func}(tonumber({v_t_pair},16),anchor_key)) end "
         f"end; "
-        f"local {v_env}=(getfenv and getfenv()) or _ENV or _G; "
-        f"local {v_func}={v_env}[{v_str1}] or {v_env}[{v_str2}] or load; "
+        f"for {v_t_idx}=1,#{v_h_gf},2 do " 
+        f"local {v_t_pair}=string.sub({v_h_gf},{v_t_idx},{v_t_idx}+1); "
+        f"if #{v_t_pair}==2 then {v_str3}={v_str3}..string.char({v_bit_func}(tonumber({v_t_pair},16),anchor_key)) end "
+        f"end; "
+        f"for {v_t_idx}=1,#{v_h_ts},2 do " 
+        f"local {v_t_pair}=string.sub({v_h_ts},{v_t_idx},{v_t_idx}+1); "
+        f"if #{v_t_pair}==2 then {v_str4}={v_str4}..string.char({v_bit_func}(tonumber({v_t_pair},16),anchor_key)) end "
+        f"end; "
+        f"local {v_env} = (getgenv and getgenv()) or _G or _ENV; "
+        f"local {v_func} = {v_env}[{v_str1}] or {v_env}[{v_str2}] or load; "
+        f"local ts_func = {v_env}[{v_str4}] or tostring; "
+        
+        # ĐOẠN KIỂM TRA ĐỘ ĐỘC LẬP VÀ TOÀN VẸN CỦA HÀM (ANTI-HOOK)
+        f"local {v_chk_str} = ts_func({v_func}); "
+        f"local {v_safety} = true; "
+        f"if string.find({v_chk_str}, \"@\") or string.find({v_chk_str}, \"custom\") or string.find({v_chk_str}, \"hook\") or #{v_chk_str} > 35 then "
+        f"{v_safety} = false; "
+        f"end; "
+        f"if not (rawget and rawget({v_env}, {v_str1}) == nil) then "
+        # Nếu phát hiện hàm bị ghi đè cục bộ trong getgenv (dấu hiệu tool hook nằm vùng)
+        f"if ts_func(rawget({v_env}, {v_str1})) ~= {v_chk_str} then {v_safety} = false; end; "
+        f"end; "
+        
+        # Bẫy lỗi bảo mật nâng cao
+        f"if not {v_safety} then "
+        f"while true do end; " # Gây treo cứng luồng chạy của executor nếu bị phát hiện
+        f"end; "
+        
         f"local {v_run}={v_func}(table.concat({v_buffer})); " 
         f"if {v_run} then {v_run}(...) end "
         f"end "
