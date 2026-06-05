@@ -120,16 +120,15 @@ def ironbrew_total_wrapped_v12_1(source_code):
     v_clean_str, v_decrypt_func = random_var(), random_var()
     v_tab, v_concat = random_var(), random_var()
 
-    # Tạo mã rác hiệu năng mượt mà ổn định
+    # GIỮ NGUYÊN 5000 DÒNG MÃ RÁC SIÊU NẶNG
     junk_pieces = []
-    for _ in range(1000):
+    for _ in range(5000):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
     half = len(junk_pieces) // 2
-    junk_top, junk_bottom = ";\n".join(junk_pieces[:half]), ";\n".join(junk_pieces[half:])
+    junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Giữ nguyên cấu trúc thứ tự mảng để đồng bộ chính xác chỉ số k_idx với Python
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         obf_val = obfuscate_core_math(k_val)
@@ -138,63 +137,65 @@ def ironbrew_total_wrapped_v12_1(source_code):
         
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
+    # Đưa toàn bộ cấu trúc về lại thành 1 chuỗi liên tục không xuống dòng
     bit_and_interpreter_core = (
-        f"local function {v_bit_func}({v_i},{v_j})\n"
-        f"local {v_x}=0;\n"
-        f"for {v_m}=0,7 do\n"
-        f"local {v_w}=({v_i}/2^{v_m})%2;\n"
-        f"local {v_res}=({v_j}/2^{v_m})%2;\n"
-        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+2^{v_m} end\n"
-        f"end\n"
-        f"return {v_x}\n"
-        f"end;\n"
-        f"local {v_bytecode}={bytecode_string_block};\n"
-        f"local {v_h_ls}={h_ls_string_block};\n"
-        f"local {v_h_l}={h_l_string_block};\n"
-        f"local function {v_decrypt_func}({v_clean_str})\n"
-        f"local {v_tab}={{}};\n"
-        f"local {v_concat}=rawget(string, 'char') or string.char;\n"
-        f"{lua_matrix_init}\n"
-        f"local {v_byte_idx}=0;\n"
-        f"for {v_idx}=1,#{v_clean_str},2 do\n"
-        f"local {v_pair}=string.sub({v_clean_str},{v_idx},{v_idx}+1);\n"
-        f"local {v_num}=tonumber({v_pair},16);\n"
-        f"local {v_dec}={v_num};\n"
-        f"for {v_loop_k}=1,#{v_matrix} do\n"
-        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]);\n"
-        f"end;\n"
-        f"{v_tab}[#{v_tab}+1]={v_concat}({v_dec});\n"
-        f"for {v_loop_k}=1,#{v_matrix} do\n"
-        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256;\n"
-        f"end;\n"
-        f"{v_byte_idx}={v_byte_idx}+1;\n"
-        f"end;\n"
-        f"return table.concat({v_tab});\n"
-        f"end;\n"
-        f"local {v_buffer} = {v_decrypt_func}(string.sub({v_bytecode},5));\n"
-        f"local {v_str1} = {v_decrypt_func}(string.sub({v_h_ls},5));\n"
-        f"local {v_str2} = {v_decrypt_func}(string.sub({v_h_l},5));\n"
-        f"local {v_env} = _ENV or _G or getfenv();\n"
-        f"local {v_func} = rawget({v_env}, {v_str1}) or rawget({v_env}, {v_str2});\n"
-        f"if not {v_func} then\n"
-        f"local {v_next} = rawget({v_env}, 'next');\n"
-        f"if {v_next} then\n"
-        f"local {v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, nil);\n"
-        f"while {v_key_nxt} ~= nil do\n"
-        f"if type({v_val_nxt}) == 'function' then\n"
-        f"local {v_succ}, {v_match} = pcall(function() return {v_val_nxt} == rawget({v_env}, {v_str1}) or {v_val_nxt} == rawget({v_env}, {v_str2}) end);\n"
-        f"if {v_succ} and {v_match} then {v_func} = {v_val_nxt}; break; end\n"
-        f"end;\n"
-        f"{v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, {v_key_nxt});\n"
-        f"end\n"
-        f"end\n"
-        f"end;\n"
-        f"local {v_run}={v_func}({v_buffer});\n"
+        f"local function {v_bit_func}({v_i},{v_j}) "
+        f"local {v_x}=0; "
+        f"for {v_m}=0,7 do "
+        f"local {v_w}=({v_i}/2^{v_m})%2; "
+        f"local {v_res}=({v_j}/2^{v_m})%2; "
+        f"if {v_w}-{v_w}%1~={v_res}-{v_res}%1 then {v_x}={v_x}+2^{v_m} end "
+        f"end "
+        f"return {v_x} "
+        f"end; "
+        f"local {v_bytecode}={bytecode_string_block}; "
+        f"local {v_h_ls}={h_ls_string_block}; "
+        f"local {v_h_l}={h_l_string_block}; "
+        f"local function {v_decrypt_func}({v_clean_str}) "
+        f"local {v_tab}={{}}; "
+        f"local {v_concat}=rawget(string, 'char') or string.char; "
+        f"{lua_matrix_init} "
+        f"local {v_byte_idx}=0; "
+        f"for {v_idx}=1,#{v_clean_str},2 do "
+        f"local {v_pair}=string.sub({v_clean_str},{v_idx},{v_idx}+1); "
+        f"local {v_num}=tonumber({v_pair},16); "
+        f"local {v_dec}={v_num}; "
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_dec}={v_bit_func}({v_dec},{v_matrix}[{v_loop_k}][1]); "
+        f"end; "
+        f"{v_tab}[#{v_tab}+1]={v_concat}({v_dec}); "
+        f"for {v_loop_k}=1,#{v_matrix} do "
+        f"{v_matrix}[{v_loop_k}][1]=({v_matrix}[{v_loop_k}][1]+{v_byte_idx}+{v_matrix}[{v_loop_k}][2])%256; "
+        f"end; "
+        f"{v_byte_idx}={v_byte_idx}+1; "
+        f"end; "
+        f"return table.concat({v_tab}); "
+        f"end; "
+        f"local {v_buffer} = {v_decrypt_func}(string.sub({v_bytecode},5)); "
+        f"local {v_str1} = {v_decrypt_func}(string.sub({v_h_ls},5)); "
+        f"local {v_str2} = {v_decrypt_func}(string.sub({v_h_l},5)); "
+        f"local {v_env} = _ENV or _G or getfenv(); "
+        f"local {v_func} = rawget({v_env}, {v_str1}) or rawget({v_env}, {v_str2}); "
+        f"if not {v_func} then "
+        f"local {v_next} = rawget({v_env}, 'next'); "
+        f"if {v_next} then "
+        f"local {v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, nil); "
+        f"while {v_key_nxt} ~= nil do "
+        f"if type({v_val_nxt}) == 'function' then "
+        f"local {v_succ}, {v_match} = pcall(function() return {v_val_nxt} == rawget({v_env}, {v_str1}) or {v_val_nxt} == rawget({v_env}, {v_str2}) end); "
+        f"if {v_succ} and {v_match} then {v_func} = {v_val_nxt}; break; end "
+        f"end; "
+        f"{v_key_nxt}, {v_val_nxt} = {v_next}({v_env}, {v_key_nxt}); "
+        f"end "
+        f"end "
+        f"end; "
+        f"local {v_run}={v_func}({v_buffer}); "
         f"if {v_run} then {v_run}(...) end"
     )
     
-    total_payload = f"{junk_top};\n{bit_and_interpreter_core};\n{junk_bottom}"
-    return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) \n{total_payload}\nend)(...)"
+    total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
+    clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
+    return f"-- This file was created by 8xms discord.gg/8mktK8HtT --\nreturn(function(...) {clean_payload} end)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
