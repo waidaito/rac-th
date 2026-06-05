@@ -82,12 +82,12 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def ironbrew_total_wrapped_v12_2_premium(source_code):
+def ironbrew_wearedevs_pure_style(source_code):
     # Thiết lập số lượng tầng khóa ngẫu nhiên từ 7 đến 12 tầng độc lập
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Mã hóa Payload nguồn qua hệ thống Multi-Key Layer liên hoàn kết hợp khóa cuộn
+    # Mã hóa chuỗi nguồn qua hệ thống mã hóa ma trận cuộn
     encrypted_hex_list = []
     current_keys = list(keys_list)
     
@@ -109,10 +109,10 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_k, v_matrix = random_var(), random_var()
     
-    # Định nghĩa các tham số nhận vào từ Tuple Arguments ẩn danh ở đuôi file (Phong cách WeAreDevs)
+    # Biến nhận tham số ẩn truyền từ đuôi lên
     v_p_env, v_p_loader, v_p_unpack = random_var(), random_var(), random_var()
     
-    # Sinh 5000 dòng mã rác đánh lạc hướng máy quét tĩnh
+    # Sinh 5000 dòng mã rác đánh lừa các bộ đọc tĩnh
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -121,7 +121,7 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Đóng gói mảng khóa
+    # Cấu trúc mảng khóa
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
@@ -129,7 +129,7 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
     
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # LÕI TRÌNH THÔNG DỊCH V12.2 PREMIUM - THỰC THI ẨN DANH QUA PARAMETER
+    # LÕI GIẢI MÃ THUẦN TÚY - THỰC THI QUA LOADER ẨN DANH TRUYỀN VÀO HÀM
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -159,19 +159,7 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
         f"v_byte_idx=v_byte_idx+1; "
         f"end; "
         
-        # --- CƠ CHẾ BẢO VỆ CHỦ ĐỘNG: KIỂM TRA ĐỘ "ZIN" CỦA HÀM QUA THAM SỐ ẨN ---
-        f"local is_hooked = false; "
-        f"if {v_p_loader} then "
-        f"  local s_info = tostring({v_p_loader}); "
-        f"  if not string.find(s_info, \"builtin\") and not string.find(s_info, \"0x\") then is_hooked = true end; "
-        f"  if isourclosure and isourclosure({v_p_loader}) then is_hooked = true end; "
-        f"  if checkclosure and checkclosure({v_p_loader}) then is_hooked = true end; "
-        f"end; "
-        f"if is_hooked then "
-        f"  while true do end " # Phát hiện bị hook lập tức đóng băng game đối thủ
-        f"end; "
-        
-        # Gọi gián tiếp thông qua tham số vô danh (Bypass hook tĩnh tuyệt đối)
+        # Thực thi mượt mà bằng loader ẩn danh (Bypass hoàn toàn các bộ hook chuỗi tĩnh)
         f"if type({v_p_loader}) == \"function\" then "
         f"local {v_run} = {v_p_loader}({v_buffer}); "
         f"if {v_run} then {v_run}({v_p_unpack}(...)) end "
@@ -181,8 +169,8 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     
-    # --- ĐOẠN ĐUÔI GIẤU HÀM BẰNG BYTE THẬP PHÂN (MÚP KIỂU WEAREDEVS) ---
-    # "\108\111\097\100\115\116\114\105\110\103" chính là chữ "loadstring"
+    # --- ĐOẠN ĐUÔI GIẤU BÀI PHONG CÁCH WEAREDEVS CHUẨN ---
+    # Chuỗi hex này tương đương với chữ "loadstring" khi game thực thi
     hex_loadstring_gate = "\\108\\111\\097\\100\\115\\116\\114\\105\\110\\103"
     
     footer_args = (
@@ -191,7 +179,7 @@ def ironbrew_total_wrapped_v12_2_premium(source_code):
         f"unpack or table.unpack"
     )
     
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.2 Premium --\nreturn(function({v_p_env}, {v_p_loader}, {v_p_unpack}, ...) {clean_payload} end)({footer_args}, ...)"
+    return f"-- Protected by Fixed Layer-XOR Architecture v12.2 Pure WeAreDevs Style --\nreturn(function({v_p_env}, {v_p_loader}, {v_p_unpack}, ...) {clean_payload} end)({footer_args}, ...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -202,11 +190,11 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing v12.2 Premium...")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.2 WeAreDevs Engine...")
     try:
-        final_script = ironbrew_total_wrapped_v12_2_premium(source_code)
+        final_script = ironbrew_wearedevs_pure_style(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
-        await ctx.send(content=f"{ctx.author.mention} Done (v12.2 Premium Extended)", file=discord.File(file_stream, filename="protected_script.txt"))
+        await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="protected_script.txt"))
         await status_msg.delete()
     except Exception as e:
         if status_msg:
@@ -216,4 +204,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-        
+    
