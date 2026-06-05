@@ -82,12 +82,12 @@ def generate_clean_advanced_junk(target):
     else:
         return obfuscate_core_math(target)
 
-def ironbrew_wearedevs_pure_style(source_code):
-    # Thiết lập số lượng tầng khóa ngẫu nhiên từ 7 đến 12 tầng độc lập
+def ironbrew_wearedevs_pure_fixed(source_code):
+    # Thiết lập từ 7 đến 12 tầng độc lập
     keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Mã hóa chuỗi nguồn qua hệ thống mã hóa ma trận cuộn
+    # Mã hóa ma trận cuộn liên hoàn
     encrypted_hex_list = []
     current_keys = list(keys_list)
     
@@ -103,16 +103,16 @@ def ironbrew_wearedevs_pure_style(source_code):
     fake_signature = "".join(random.choices(string.ascii_uppercase, k=3))
     bytecode_string_block = f"[=[{fake_signature}:{hex_payload}]=]"
     
-    # Sinh tên biến ngẫu nhiên cho lõi
+    # Biến ngẫu nhiên cho lõi
     v_bit_func, v_w, v_m, v_x, v_i, v_j, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_buffer, v_run = [random_var() for _ in range(3)]
     v_idx, v_pair, v_num, v_dec = [random_var() for _ in range(4)]
     v_loop_k, v_matrix = random_var(), random_var()
     
-    # Biến nhận tham số ẩn truyền từ đuôi lên
-    v_p_env, v_p_loader, v_p_unpack = random_var(), random_var(), random_var()
+    # Biến nhận tham số ẩn truyền từ đuôi lên (Bypass hook tĩnh)
+    v_p_env, v_p_loader = random_var(), random_var()
     
-    # Sinh 5000 dòng mã rác đánh lừa các bộ đọc tĩnh
+    # Sinh 5000 dòng mã rác
     junk_pieces = []
     for _ in range(5000):
         v_junk = random_var()
@@ -121,7 +121,7 @@ def ironbrew_wearedevs_pure_style(source_code):
     half = len(junk_pieces) // 2
     junk_top, junk_bottom = ";".join(junk_pieces[:half]), ";".join(junk_pieces[half:])
     
-    # Cấu trúc mảng khóa
+    # Đóng gói mảng khóa
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
@@ -129,7 +129,7 @@ def ironbrew_wearedevs_pure_style(source_code):
     
     lua_matrix_init = f"local {v_matrix} = {{{','.join(matrix_elements)}}};"
 
-    # LÕI GIẢI MÃ THUẦN TÚY - THỰC THI QUA LOADER ẨN DANH TRUYỀN VÀO HÀM
+    # LÕI GIẢI MÃ SỬA ĐỔI - GỌI TRỰC TIẾP KHÔNG QUA UNPACK THAM SỐ RỖNG
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; "
@@ -159,27 +159,25 @@ def ironbrew_wearedevs_pure_style(source_code):
         f"v_byte_idx=v_byte_idx+1; "
         f"end; "
         
-        # Thực thi mượt mà bằng loader ẩn danh (Bypass hoàn toàn các bộ hook chuỗi tĩnh)
+        # Gọi gián tiếp thực thi chuỗi mượt mà, loại bỏ hoàn toàn unpack để tránh lỗi Delta
         f"if type({v_p_loader}) == \"function\" then "
         f"local {v_run} = {v_p_loader}({v_buffer}); "
-        f"if {v_run} then {v_run}({v_p_unpack}(...)) end "
+        f"if {v_run} then {v_run}() end "
         f"end"
     )
     
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     
-    # --- ĐOẠN ĐUÔI GIẤU BÀI PHONG CÁCH WEAREDEVS CHUẨN ---
-    # Chuỗi hex này tương đương với chữ "loadstring" khi game thực thi
+    # --- ĐOẠN ĐUÔI GIẤU BÀI PHONG CÁCH WEAREDEVS CHUẨN ĐÃ SỬA LỖI ---
     hex_loadstring_gate = "\\108\\111\\097\\100\\115\\116\\114\\105\\110\\103"
     
     footer_args = (
         f"getfenv and getfenv() or _ENV, "
-        f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[\"{hex_loadstring_gate}\"], "
-        f"unpack or table.unpack"
+        f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[\"{hex_loadstring_gate}\"]"
     )
     
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.2 Pure WeAreDevs Style --\nreturn(function({v_p_env}, {v_p_loader}, {v_p_unpack}, ...) {clean_payload} end)({footer_args}, ...)"
+    return f"-- Protected by Fixed Layer-XOR Architecture v12.2.2 Pure WeAreDevs Style --\nreturn(function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args})"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -192,7 +190,7 @@ async def obf_command(ctx, *, text_code: str = None):
         return await ctx.reply("Please add file / code.")
     status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.2 WeAreDevs Engine...")
     try:
-        final_script = ironbrew_wearedevs_pure_style(source_code)
+        final_script = ironbrew_wearedevs_pure_fixed(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="protected_script.txt"))
         await status_msg.delete()
