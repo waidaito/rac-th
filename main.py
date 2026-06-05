@@ -90,7 +90,7 @@ def simple_lexer_to_opcodes(source_code):
             opcodes.append({"op": 30, "data": 1})
     return opcodes
 
-def ironbrew_ultimate_vm_v14(source_code):
+def ironbrew_ultimate_vm_v14_2(source_code):
     # 1. Sinh 5000 dòng rác bọc ngoài
     junk_pieces = []
     for _ in range(5000):
@@ -103,16 +103,15 @@ def ironbrew_ultimate_vm_v14(source_code):
     # 2. Biên dịch code sang Opcode
     compiled_opcodes = simple_lexer_to_opcodes(source_code)
     
-    # 3. Tạo hệ thống KHÓA XOR CUỘN cho VM nâng cao giống bản v12.1
-    keys_count = random.randint(5, 8)
+    # 3. Random ma trận khóa từ 7 đến 12 tầng cho múp hẳn
+    keys_count = random.randint(7, 12)
     keys_list = [random.randint(50, 255) for _ in range(keys_count)]
     
-    # Chuẩn bị dữ liệu để nén thành chuỗi Hex
+    # FIX LỖI: Sử dụng tag ranh giới cực kỳ nghiêm ngặt tránh xung đột dấu hai chấm ':'
     raw_payload_data = []
     for inst in compiled_opcodes:
-        # Định dạng cấu trúc lệnh: OP:DATA
-        raw_payload_data.append(f"{inst['op']}:{inst['data']}")
-    full_str_payload = "||".join(raw_payload_data)
+        raw_payload_data.append(f"<|OP|>{inst['op']}<|DATA|>{inst['data']}")
+    full_str_payload = "<|SPLIT|>".join(raw_payload_data)
 
     # Tiến hành XOR cuộn chuỗi chỉ thị Opcode
     encrypted_hex_list = []
@@ -128,19 +127,19 @@ def ironbrew_ultimate_vm_v14(source_code):
     hex_bytecode_stream = "".join(encrypted_hex_list)
     bytecode_string_block = f"[=[XORVM:{hex_bytecode_stream}]=]"
 
-    # Tạo bảng ma trận khóa
+    # Tạo bảng ma trận khóa toán học ẩn danh
     matrix_elements = []
     for k_idx, k_val in enumerate(keys_list):
         matrix_elements.append(f"{{{obfuscate_core_math(k_val)},{obfuscate_core_math(k_idx + 3)}}}")
     matrix_elements.reverse()
 
-    # Tên biến máy ảo
+    # Khởi tạo tên biến ngẫu nhiên cho Máy ảo
     v_bit_func, v_i, v_j, v_x, v_m, v_w, v_res = [random_var() for _ in range(7)]
     v_bytecode, v_matrix, v_byte_idx, v_idx, v_pair, v_num, v_dec, v_loop_k = [random_var() for _ in range(8)]
     v_buffer, v_pc, v_instructions, v_stack, v_env, v_instr, v_op, v_data = [random_var() for _ in range(8)]
-    v_split, v_single, v_p_op, v_p_data = [random_var() for _ in range(4)]
+    v_split, v_p_op, v_p_data = [random_var() for _ in range(3)]
 
-    # 4. Lõi Trình thông dịch VM kết hợp vòng lặp giải mã XOR xoay vòng
+    # 4. Lõi Trình thông dịch VM phối hợp bộ giải mã XOR cuộn bảo mật
     bit_and_interpreter_core = (
         f"local function {v_bit_func}({v_i},{v_j}) "
         f"local {v_x}=0; for {v_m}=0,7 do "
@@ -166,10 +165,25 @@ def ironbrew_ultimate_vm_v14(source_code):
         f"end; "
         f"{v_byte_idx} = {v_byte_idx} + 1; "
         f"end; "
-        # Khôi phục mảng cấu trúc Opcode từ chuỗi đã giải mã XOR
+        # Bóc tách cấu trúc bằng tag ranh giới an toàn đã sửa đổi
         f"local {v_instructions} = {{}}; "
-        f"for {v_split} in string.gmatch({v_buffer}, \"([^|]+)\") do "
-        f"local {v_p_op}, {v_p_data} = string.match({v_split}, \"([^:]+):(.*)\"); "
+        f"for {v_split} in string.gmatch({v_buffer}, \"([^<]+)<|SPLIT|>\") do "
+        f"local {v_p_op} = string.match({v_split}, \"<|OP|>(%d+)<|DATA|>\"); "
+        f"local {v_p_data} = string.match({v_split}, \"<|DATA|>(.*)\"); "
+        f"if {v_p_op} then "
+        f"local n_op = tonumber({v_p_op}); "
+        f"if n_op ~= 99 and string.sub({v_p_data},1,1) ~= \"\\\"\" then "
+        f"local hex_out = \"\"; for c_idx=1,#{v_p_data} do hex_out=hex_out..string.format(\"\\\\x%02X\",string.byte({v_p_data},c_idx)) end; "
+        f"{v_p_data} = hex_out; "
+        f"end; "
+        f"{v_instructions}[#{v_instructions}+1] = {{n_op, {v_p_data}}}; "
+        f"end; "
+        f"end; "
+        # Xử lý phần tử cuối cùng của chuỗi do vòng gã gmatch không vét hết ranh giới cuối
+        f"local last_chunk = string.match({v_buffer}, \".*<|SPLIT|>(.*)\") or {v_buffer}; "
+        f"local {v_p_op} = string.match(last_chunk, \"<|OP|>(%d+)<|DATA|>\"); "
+        f"local {v_p_data} = string.match(last_chunk, \"<|DATA|>(.*)\"); "
+        f"if {v_p_op} then "
         f"local n_op = tonumber({v_p_op}); "
         f"if n_op ~= 99 and string.sub({v_p_data},1,1) ~= \"\\\"\" then "
         f"local hex_out = \"\"; for c_idx=1,#{v_p_data} do hex_out=hex_out..string.format(\"\\\\x%02X\",string.byte({v_p_data},c_idx)) end; "
@@ -199,7 +213,7 @@ def ironbrew_ultimate_vm_v14(source_code):
 
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
-    return f"-- Protected by 8xms Ultimate XOR-VM Architecture v14.0 --\nreturn(function(...) {clean_payload} end)(...)"
+    return f"-- Protected by 8xms Ultimate XOR-VM Architecture v14.2 --\nreturn(function(...) {clean_payload} end)(...)"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -212,7 +226,7 @@ async def obf_command(ctx, *, text_code: str = None):
         return await ctx.reply("Please add file / code.")
     status_msg = await ctx.reply("<a:loading:1477881141678702603> Transpiling into Ultimate XOR-VM structures... ")
     try:
-        final_script = ironbrew_ultimate_vm_v14(source_code)
+        final_script = ironbrew_ultimate_vm_v14_2(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
         await ctx.send(content=f"{ctx.author.mention} Done", file=discord.File(file_stream, filename="message.txt"))
         await status_msg.delete()
@@ -226,4 +240,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-                                    
+    
