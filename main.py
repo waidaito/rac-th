@@ -46,18 +46,10 @@ def generate_vm_math(target):
     return f"({expr})"
 
 def simple_lexer_to_opcodes(source_code):
-    """
-    Trình biên dịch cấu trúc thô (Basic Compiler):
-    Chuyển đổi một số câu lệnh Lua cơ bản thành chuỗi cấu trúc Opcode nhị phân giả lập.
-    Cơ chế này minh họa cách chuyển câu lệnh chuỗi thành chỉ thị số của VM.
-    """
     opcodes = []
-    # Phân tích các hàm in hoặc gọi hàm cơ bản dạng global_name("string_literal")
     patterns = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*\"([^\"]*)\"\s*\)', source_code)
     
     if not patterns:
-        # Nếu mã nguồn phức tạp nằm ngoài tầm xử lý của Lexer cơ bản này, 
-        # cấu trúc sẽ mặc định đóng gói toàn bộ đoạn mã để thông dịch qua một hàm Opcode đặc biệt
         opcodes.append({
             "op": 99,  # OP_NATIVE_EXEC
             "data": source_code
@@ -74,24 +66,18 @@ def simple_lexer_to_opcodes(source_code):
             })
             opcodes.append({
                 "op": 30,  # OP_CALL_FUNCTION
-                "data": 1   # Số lượng đối số
+                "data": 1   
             })
     return opcodes
 
 def build_vm_interpreter(opcodes):
-    """
-    Xây dựng trình thông dịch (Interpreter) bằng Lua.
-    Bao gồm cấu trúc mảng Opcodes và vòng lặp thực thi (Execution Loop).
-    """
     v_pc, v_instructions, v_stack, v_env = [random_var() for _ in range(4)]
     v_instr, v_op, v_data = [random_var() for _ in range(3)]
     
-    # Mã hóa dữ liệu Opcode thành dạng danh sách có cấu trúc ngẫu nhiên trong Table
     lua_opcodes_list = []
     for inst in opcodes:
         op_val = generate_vm_math(inst["op"])
         if isinstance(inst["data"], str):
-            # Mã hóa Hex chuỗi ký tự trong hằng số Opcode để chống quét chuỗi tĩnh
             hex_data = "".join([f"\\x{ord(c):02X}" for c in inst["data"]])
             data_val = f'"{hex_data}"'
         else:
@@ -100,7 +86,7 @@ def build_vm_interpreter(opcodes):
         
     lua_instructions_table = f"local {v_instructions} = {{{','.join(lua_opcodes_list)}}}"
     
-    # Xây dựng vòng lặp lệnh (Dispatcher Loop) xử lý Opcode nội bộ
+    # ĐÃ SỬA: Thay thế toàn bộ 'elif' bằng 'elseif' chuẩn cú pháp Lua
     vm_core = (
         f"{lua_instructions_table}; "
         f"local {v_pc} = 1; "
@@ -110,18 +96,16 @@ def build_vm_interpreter(opcodes):
         f"local {v_instr} = {v_instructions}[{v_pc}]; "
         f"local {v_op} = {v_instr}[1]; "
         f"local {v_data} = {v_instr}[2]; "
-        
-        # Nhánh rẽ Opcode (Instruction Branching)
-        f"if {v_op} == 10 then "  # OP_GET_GLOBAL
+        f"if {v_op} == 10 then "
         f"{v_stack}[#{v_stack}+1] = {v_env}[{v_data}]; "
-        f"elif {v_op} == 20 then " # OP_LOAD_CONST
+        f"elseif {v_op} == 20 then "
         f"{v_stack}[#{v_stack}+1] = {v_data}; "
-        f"elif {v_op} == 30 then " # OP_CALL_FUNCTION
+        f"elseif {v_op} == 30 then "
         f"local arg = {v_stack}[#{v_stack}]; "
         f"local func = {v_stack}[#{v_stack}-1]; "
-        f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}] = nil; " # Clear stack
+        f"{v_stack}[#{v_stack}] = nil; {v_stack}[#{v_stack}] = nil; "
         f"if func then func(arg) end; "
-        f"elif {v_op} == 99 then " # OP_NATIVE_EXEC (Khối cô lập bảo mật)
+        f"elseif {v_op} == 99 then "
         f"local func_native = (loadstring or load); "
         f"if func_native then "
         f"local run = func_native({v_data}); "
@@ -134,13 +118,8 @@ def build_vm_interpreter(opcodes):
     return vm_core
 
 def ironbrew_vm_v13_0(source_code):
-    # Phân tích cú pháp và trích xuất danh sách Opcode nhị phân từ mã nguồn
     compiled_opcodes = simple_lexer_to_opcodes(source_code)
-    
-    # Sinh lõi trình thông dịch Virtual Machine tùy biến cho tập Opcode vừa tạo
     vm_interpreter_payload = build_vm_interpreter(compiled_opcodes)
-    
-    # Đóng gói và loại bỏ khoảng trắng dư thừa nhằm tối ưu hóa kích thước tệp xuất ra
     clean_payload = " ".join(vm_interpreter_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     return f"-- Protected by 8xms Virtual Machine Architecture v13.0 --\nreturn (function(...) {clean_payload} end)(...)"
 
@@ -169,4 +148,4 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
-    
+            
