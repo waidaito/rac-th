@@ -177,7 +177,8 @@ def ironbrew_wearedevs_pure_fixed(source_code):
         f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[\"{hex_loadstring_gate}\"]"
     )
     
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.2.2 Pure WeAreDevs Style --\nreturn(function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args})"
+    # ĐÃ ĐỔI DÒNG KẾT THÚC: Bọc thêm hàm rỗng để ép chữ 'end' đứng biệt lập ở dòng cuối cùng file .txt
+    return f"-- Protected by Fixed Layer-XOR Architecture v12.3 Premium --\nlocal {random_var()} = (function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args});\nreturn function(...)\nend"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
