@@ -114,7 +114,7 @@ def ironbrew_wearedevs_pure_fixed(source_code):
     
     # Sinh 5000 dòng mã rác
     junk_pieces = []
-    for _ in range(5000):
+    for _ in range(10000):
         v_junk = random_var()
         rand_target = random.randint(50, 99999)
         junk_pieces.append(f"local {v_junk}={generate_clean_advanced_junk(rand_target)}")
@@ -169,16 +169,29 @@ def ironbrew_wearedevs_pure_fixed(source_code):
     total_payload = f"{junk_top};{bit_and_interpreter_core};{junk_bottom}"
     clean_payload = " ".join(total_payload.splitlines()).strip().replace(" ; ", ";").replace(";;", ";")
     
-    # --- ĐOẠN ĐUÔI GIẤU BÀI PHONG CÁCH WEAREDEVS CHUẨN ĐÃ SỬA LỖI ---
-    hex_loadstring_gate = "\\108\\111\\097\\100\\115\\116\\114\\105\\110\\103"
+    # --- ĐOẠN ĐUÔI TOÁN HỌC KHÔNG DÙNG CHUỖI SỐ THOÁT (\) ---
+    # Bẻ gãy chữ 'loadstring' sang toán học ASCII
+    loadstring_ascii = [108, 111, 97, 100, 115, 116, 114, 105, 110, 103]
+    math_elements = [obfuscate_core_math(char) for char in loadstring_ascii]
+    
+    v_gate_str, v_gate_idx, v_gate_val = random_var(), random_var(), random_var()
+    math_gate_interpreter = (
+        f"(function() "
+        f"local {v_gate_str} = \"\"; "
+        f"for {v_gate_idx}, {v_gate_val} in ipairs({{{','.join(math_elements)}}}) do "
+        f"{v_gate_str} = {v_gate_str} .. string.char({v_gate_val}) "
+        f"end; "
+        f"return {v_gate_str} "
+        f"end)()"
+    )
     
     footer_args = (
         f"getfenv and getfenv() or _ENV, "
-        f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[\"{hex_loadstring_gate}\"]"
+        f"loadstring or load or (getgenv and getgenv() or _G)[\"execute\"] or (getgenv and getgenv() or _G)[{math_gate_interpreter}]"
     )
     
-    # KẾT THÚC BẰNG CHỮ 'end' ĐI LIỀN VỚI TUPLE ARGUMENTS ĐẸP MẮT
-    return f"-- Protected by Fixed Layer-XOR Architecture v12.3 Fixed Engine --\nreturn (function({v_p_env}, {v_p_loader}) {clean_payload} end)({footer_args})"
+    # ĐỊNH DẠNG ĐUÔI TOÁN HỌC KHÉP CHUẨN KHÔNG SAI LỆCH MỘT DẤU NGOẶC NÀO
+    return f"-- Protected by Fixed Layer-XOR Architecture v12.5 Custom Engine --\nreturn (function(...) return (function({v_p_env}, {v_p_loader}) {clean_payload} end)(...) end)({footer_args})"
 
 @bot.command(name="obf")
 async def obf_command(ctx, *, text_code: str = None):
@@ -189,7 +202,7 @@ async def obf_command(ctx, *, text_code: str = None):
         source_code = re.sub(r'^```[a-zA-Z]*\n|```$', '', text_code.strip(), flags=re.MULTILINE)
     if not source_code or not source_code.strip():
         return await ctx.reply("Please add file / code.")
-    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.3 Fixed Engine...")
+    status_msg = await ctx.reply("<a:loading:1477881141678702603> Processing via v12.5 Custom Engine...")
     try:
         final_script = ironbrew_wearedevs_pure_fixed(source_code)
         file_stream = io.BytesIO(final_script.encode('utf-8'))
@@ -203,4 +216,5 @@ async def obf_command(ctx, *, text_code: str = None):
 if __name__ == "__main__":
     threading.Thread(target=run_server, daemon=True).start()
     bot.run(os.getenv("TOKEN"))
+    
         
